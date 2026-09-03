@@ -129,6 +129,8 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
   const trace: ToolTraceEntry[] = liveResult?.tool_trace ?? ctx?.tool_trace ?? [];
   const actionIncrementality =
     liveResult?.action_incrementality ?? ctx?.action_incrementality ?? null;
+  const actionLiftTrend =
+    liveResult?.action_lift_trend ?? ctx?.action_lift_trend ?? null;
 
   // A rate-limited / provider-outage run stores the raw provider error as its
   // reasoning. When the agent had already chosen an action, its real rationale
@@ -265,6 +267,7 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
                 live={!!liveResult}
                 animate
                 actionIncrementality={actionIncrementality}
+                actionLiftTrend={actionLiftTrend}
               />
             </div>
 

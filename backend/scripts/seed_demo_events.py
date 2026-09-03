@@ -97,6 +97,7 @@ class _ScriptedRecoveryProvider:
         self._step = 0
         self._intended: tuple[str, str] | None = None  # (action, base_reason)
         self._reality_check: str | None = None
+        self._trend_check: str | None = None
 
     def generate(self, *, system_prompt, conversation, tools) -> ProviderTurn:  # noqa: ARG002
         results = [e for e in conversation if e["type"] == "tool_result"]
@@ -158,12 +159,19 @@ class _ScriptedRecoveryProvider:
             return "get_historical_incrementality_for_action", {"action_type": action}
 
         if src == "get_historical_incrementality_for_action":
+            action = (self._intended or (payload.get("action_type", "whatsapp_nudge"), ""))[0]
+            self._reality_check = self._incrementality_note(action, payload)
+            # Before committing, also check whether that action's effectiveness
+            # is trending over time -- not just whether it matches the model.
+            return "get_action_lift_trend", {"action_type": action}
+
+        if src == "get_action_lift_trend":
             action, base_reason = self._intended or (
                 payload.get("action_type", "whatsapp_nudge"),
                 "model pick",
             )
-            self._reality_check = self._incrementality_note(action, payload)
-            reason = f"{base_reason} {self._reality_check}"
+            self._trend_check = self._trend_note(action, payload)
+            reason = f"{base_reason} {self._reality_check or ''} {self._trend_check}"
             amount_str = f"Rs.{self._amount / 100:.0f}"
             msg = _HINGLISH.get(action, _HINGLISH["whatsapp_nudge"]).format(
                 amount=amount_str
@@ -171,7 +179,7 @@ class _ScriptedRecoveryProvider:
             return "execute_recovery_action", {
                 "action_type": action,
                 "customer_message": msg,
-                "reason": reason[:480],
+                "reason": reason.strip()[:480],
             }
 
         if src == "execute_recovery_action":
@@ -191,8 +199,14 @@ class _ScriptedRecoveryProvider:
                 "Recovery Payment Link would be created; awaiting the "
                 "customer's payment before concluding."
             )
-            if getattr(self, "_reality_check", None):
-                summary = f"{self._reality_check} {summary}"
+            prefix = " ".join(
+                p for p in (
+                    getattr(self, "_reality_check", None),
+                    getattr(self, "_trend_check", None),
+                ) if p
+            )
+            if prefix:
+                summary = f"{prefix} {summary}"
             return "stop_recovery", {
                 "stop_reason": "action_executed_awaiting_outcome",
                 "reasoning_summary": summary[:480],
@@ -201,6 +215,28 @@ class _ScriptedRecoveryProvider:
             "stop_reason": "other",
             "reasoning_summary": "Nothing left to do.",
         }
+
+    @staticmethod
+    def _trend_note(action: str, payload: dict) -> str:
+        """Honest one-liner on the recent-vs-baseline effectiveness trend. Says
+        plainly when the data shows no detectable trend."""
+        if not payload.get("computable"):
+            return (
+                f"Trend check: not enough recent data for {action} "
+                f"({payload.get('reason')}) -- no trend claim."
+            )
+        direction = payload.get("trend_direction")
+        n = payload.get("recent_window_size")
+        if direction == "stable_or_insufficient_data":
+            return (
+                f"Trend check: {action}'s field effectiveness shows no detectable "
+                f"recent change ({n} uses in the recent window; 95% CI spans zero)."
+            )
+        ci = payload.get("trend_confidence_interval") or [None, None]
+        return (
+            f"Trend check: {action} is {direction} in the field -- recent-vs-prior "
+            f"recovery-rate change 95% CI [{ci[0]}, {ci[1]}] excludes zero."
+        )
 
     @staticmethod
     def _incrementality_note(action: str, payload: dict) -> str:

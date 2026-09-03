@@ -340,6 +340,31 @@ export interface ActionIncrementality {
   model_predicted_uplift_for_context?: number;
   note: string;
 }
+/**
+ * One entry of AgentRunResult.action_lift_trend — whether an action type's REAL
+ * observed effectiveness is trending over time, looked up via get_action_lift_trend.
+ * Mirrors app/schemas/analytics.py::ActionLiftTrendResponse (compact tool payload):
+ * the *_lift fields are incremental lift (action rate − that window's control rate);
+ * trend_confidence_interval is the Newcombe 95% CI for (recent − prior) recovery rate.
+ */
+export interface ActionLiftTrend {
+  action_type: string;
+  computable: boolean;
+  reason?: string | null;
+  trend_direction: "improving" | "declining" | "stable_or_insufficient_data";
+  trend_confidence_interval?: [number, number];
+  recent_window_description: string;
+  recent_window_size: number;
+  baseline_window_size: number;
+  all_time_lift?: number | null;
+  recent_window_lift?: number | null;
+  baseline_window_lift?: number | null;
+  recent_window_action_recovery_rate?: number | null;
+  baseline_window_action_recovery_rate?: number | null;
+  recent_window_control_recovery_rate?: number | null;
+  baseline_window_control_recovery_rate?: number | null;
+  note: string;
+}
 export interface AgentRunResult {
   recovery_event_id: number;
   agent: "gemini";
@@ -365,6 +390,7 @@ export interface AgentRunResult {
   token_usage: { prompt_tokens?: number; output_tokens?: number; total_tokens?: number };
   quantitative_scores: QuantScore[] | null;
   action_incrementality: Record<string, ActionIncrementality> | null;
+  action_lift_trend: Record<string, ActionLiftTrend> | null;
   tool_trace: ToolTraceEntry[];
   errors: string[];
 }
@@ -407,6 +433,7 @@ export interface AgentRunContext {
   };
   quantitative_scores: QuantScore[] | null;
   action_incrementality?: Record<string, ActionIncrementality> | null;
+  action_lift_trend?: Record<string, ActionLiftTrend> | null;
   tool_trace: ToolTraceEntry[];
   tools_requested_in_order: string[];
   outcome: Record<string, unknown> | null;

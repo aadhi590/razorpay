@@ -212,6 +212,54 @@ class PortfolioAllocationResponse(BaseModel):
     note: str
 
 
+class ActionLiftTrendResponse(BaseModel):
+    """Whether one ``action_type``'s *observed* recovery performance is trending
+    over time -- eroding, improving, or flat -- from
+    :meth:`AnalyticsService.action_lift_trend`.
+
+    Time-window extension of :class:`ActionIncrementalityResponse`, using the
+    **same** Newcombe/Wilson interval, here on the action's recovery rate in the
+    recent ``recent_window_days``-day window vs. the disjoint prior window.
+
+    ``*_lift`` fields are incremental lift (action rate minus that window's own
+    control rate), floats in ``[-1, 1]``, reported for context.
+    ``trend_confidence_interval`` is the 95% CI for ``recent_action_recovery_rate
+    - baseline_action_recovery_rate`` (positive => better recently).
+
+    ``trend_direction`` is one of ``"improving"`` / ``"declining"`` /
+    ``"stable_or_insufficient_data"``; the last is used whenever the interval
+    includes zero OR a window is too thin. ``computable`` is ``False`` (with
+    ``reason`` ``"insufficient_recent_data"`` or ``"insufficient_baseline_data"``)
+    when a window has fewer than ``MIN_DISTINCT_EVENTS_PER_ACTION`` uses of the
+    action or no control events -- no trend is fabricated from a thin window.
+    """
+
+    action_type: str
+    computable: bool
+    reason: str | None = None
+
+    trend_direction: str  # improving | declining | stable_or_insufficient_data
+    trend_confidence_interval: list[float] | None  # [low, high] for recent - prior rate
+    confidence_method: str  # "newcombe_wilson_95_difference" | "not_computed"
+
+    recent_window_description: str
+    recent_window_days: int
+    recent_window_size: int          # distinct events with the action in the window
+    baseline_window_size: int
+    all_time_window_size: int
+
+    all_time_lift: float | None
+    recent_window_lift: float | None
+    baseline_window_lift: float | None
+
+    recent_window_action_recovery_rate: float | None
+    baseline_window_action_recovery_rate: float | None
+    recent_window_control_recovery_rate: float | None
+    baseline_window_control_recovery_rate: float | None
+
+    sample_size_note: str
+
+
 class RecoveryImpactResponse(BaseModel):
     """Measured money recovered across a batch: the treated group's recovery
     performance above the randomized control baseline.

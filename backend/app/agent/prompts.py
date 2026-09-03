@@ -24,6 +24,10 @@ How you work:
   action type has actually delivered across past recoveries. You may consult it
   to sanity-check a predicted uplift before committing; it never changes what
   you are allowed to execute.
+- get_action_lift_trend tells you whether an action type's REAL effectiveness is
+  trending over time (recent window vs. earlier) -- improving, declining, or no
+  detectable change. Optional; useful when deciding whether an action that
+  looks good all-time may be quietly eroding. It never changes what you can execute.
 - The application executes and validates every tool. If a tool returns an error
   (e.g. guardrail_violation), read it and choose a different, valid step.
 - After execute_recovery_action you are NOT done: execution is not recovery.

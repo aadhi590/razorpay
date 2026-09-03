@@ -26,7 +26,7 @@ ratio guards against division by zero.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import Select, and_, case, distinct, func, or_, select
@@ -59,6 +59,13 @@ from app.services.experimentation import (
 )
 
 _CENTS = Decimal("0.01")
+
+# Recent window for `action_lift_trend`. The synthetic dataset spans ~9 months
+# with ~1.2-1.5k recovery events per month fairly evenly distributed, so a 90-day
+# calendar window holds >1000 events per action -- enough for a stable Wilson
+# interval -- while still being genuinely "recent". The prior (baseline) window
+# is everything before it, and the two are disjoint.
+RECENT_WINDOW_DAYS = 90
 
 
 def _rupees(paise) -> Decimal:
@@ -675,6 +682,8 @@ class AnalyticsService:
         action_type: str,
         *,
         experiment_id: int | None = None,
+        since: "datetime | None" = None,
+        until: "datetime | None" = None,
     ) -> "ActionIncrementalityResponse":
         """Observed, measured incremental recovery lift for one ``action_type``.
 
@@ -698,6 +707,13 @@ class AnalyticsService:
         ``experiment_id`` scopes both groups to one experiment (used only by the
         tests, mirroring :meth:`recovery_impact`); the agent tool always calls
         this globally.
+
+        ``since`` / ``until`` restrict **both** the action arm and the control
+        arm to ``RecoveryEvent.created_at`` in ``[since, until)`` -- the same
+        window applied identically to both, so the incremental-lift subtraction
+        stays valid. Used by :meth:`action_lift_trend` to compute the lift over a
+        recent window vs. a disjoint prior window; ``None`` (the default) is the
+        all-time scope the agent tool uses directly.
         """
         from app.services.proportion_stats import newcombe_difference_interval
 
@@ -711,6 +727,14 @@ class AnalyticsService:
         if experiment_id is not None:
             treated_where = and_(treated_where, f.c.experiment_id == experiment_id)
             control_where = and_(control_where, f.c.experiment_id == experiment_id)
+        if since is not None or until is not None:
+            window = select(RecoveryEvent.id)
+            if since is not None:
+                window = window.where(RecoveryEvent.created_at >= since)
+            if until is not None:
+                window = window.where(RecoveryEvent.created_at < until)
+            treated_where = and_(treated_where, f.c.re_id.in_(window))
+            control_where = and_(control_where, f.c.re_id.in_(window))
 
         def _counts(where_clause) -> tuple[int, int]:
             row = self.db.execute(
@@ -811,6 +835,208 @@ class AnalyticsService:
             parts.append(
                 "The interval includes zero, so this is a directional estimate "
                 "only -- not distinguishable from noise at this sample size."
+            )
+        return " ".join(parts)
+
+    # ------------------------------------------------------------------
+    # Recent-vs-baseline lift trend (consumed by the agent tool
+    # `get_action_lift_trend`, not exposed as an HTTP route).
+    # ------------------------------------------------------------------
+    def action_lift_trend(
+        self,
+        action_type: str,
+        *,
+        experiment_id: int | None = None,
+        now: "datetime | None" = None,
+    ) -> "ActionLiftTrendResponse":
+        """Is one ``action_type``'s *observed* recovery performance trending over
+        time -- eroding, improving, or flat?
+
+        This is the time-window extension of :meth:`action_incrementality`. It
+        does **not** introduce a second statistical method: it calls
+        ``action_incrementality`` three times (all-time; the recent
+        ``RECENT_WINDOW_DAYS``-day window; the disjoint prior window) and then
+        applies the *same* :func:`newcombe_difference_interval` used everywhere
+        else -- here to the action's recovery rate in the recent window vs. the
+        prior window.
+
+        Honesty rules, matching the rest of this module:
+
+        * the recent and prior windows are **disjoint** (``created_at >= cutoff``
+          vs. ``created_at < cutoff``), so the two proportions are independent and
+          Newcombe's assumption holds -- comparing "recent" against "all-time"
+          would compare a sample against a superset of itself, which is invalid;
+        * if either window has fewer than ``MIN_DISTINCT_EVENTS_PER_ACTION`` uses
+          of the action (the same floor the all-time tool enforces), or no
+          control events, the result is ``computable=False`` with an explicit
+          reason -- no trend is fabricated from a thin window;
+        * ``trend_direction`` is ``"stable_or_insufficient_data"`` unless the
+          interval lies **entirely** on one side of zero -- a wide interval that
+          straddles zero is reported as no detectable trend, not spun as one;
+        * the control-arm recovery rate for both windows is reported too, so a
+          system-wide shift (which would move every action) is visible rather
+          than being misattributed to this action.
+
+        ``experiment_id`` isolates a constructed dataset for the tests, mirroring
+        :meth:`action_incrementality` / :meth:`recovery_impact`; the agent tool
+        always calls this globally. ``now`` pins the window boundary for
+        deterministic tests; it defaults to the current time.
+        """
+        from datetime import timedelta
+
+        from app.schemas.analytics import ActionLiftTrendResponse
+        from app.services.proportion_stats import newcombe_difference_interval
+
+        now = now or datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=RECENT_WINDOW_DAYS)
+        window_desc = (
+            f"recovery events created in the {RECENT_WINDOW_DAYS} days before "
+            f"{now.date().isoformat()}"
+        )
+
+        all_time = self.action_incrementality(
+            action_type, experiment_id=experiment_id
+        )
+        recent = self.action_incrementality(
+            action_type, experiment_id=experiment_id, since=cutoff
+        )
+        prior = self.action_incrementality(
+            action_type, experiment_id=experiment_id, until=cutoff
+        )
+
+        base = dict(
+            action_type=action_type,
+            recent_window_description=window_desc,
+            recent_window_days=RECENT_WINDOW_DAYS,
+            all_time_lift=all_time.observed_incremental_lift,
+            all_time_window_size=all_time.treated_group_size,
+            recent_window_size=recent.treated_group_size,
+            baseline_window_size=prior.treated_group_size,
+        )
+        _blank = dict(
+            recent_window_lift=None,
+            baseline_window_lift=None,
+            recent_window_action_recovery_rate=None,
+            baseline_window_action_recovery_rate=None,
+            recent_window_control_recovery_rate=None,
+            baseline_window_control_recovery_rate=None,
+            trend_confidence_interval=None,
+            confidence_method="not_computed",
+        )
+
+        if not recent.computable:
+            return ActionLiftTrendResponse(
+                computable=False,
+                reason="insufficient_recent_data",
+                trend_direction="stable_or_insufficient_data",
+                sample_size_note=(
+                    f"The recent window ({window_desc}) has only "
+                    f"{recent.treated_group_size} use(s) of {action_type!r} "
+                    f"(or no control events) -- below "
+                    f"{MIN_DISTINCT_EVENTS_PER_ACTION}, the same floor the "
+                    "all-time incrementality tool enforces. No trend is reported "
+                    "rather than inferring one from too few recent points."
+                ),
+                **base,
+                **_blank,
+            )
+        if not prior.computable:
+            return ActionLiftTrendResponse(
+                computable=False,
+                reason="insufficient_baseline_data",
+                trend_direction="stable_or_insufficient_data",
+                recent_window_lift=recent.observed_incremental_lift,
+                recent_window_action_recovery_rate=(
+                    recent.observed_recovery_rate_for_action
+                ),
+                recent_window_control_recovery_rate=(
+                    recent.baseline_control_recovery_rate
+                ),
+                baseline_window_lift=None,
+                baseline_window_action_recovery_rate=None,
+                baseline_window_control_recovery_rate=None,
+                trend_confidence_interval=None,
+                confidence_method="not_computed",
+                sample_size_note=(
+                    f"The prior (pre-{cutoff.date().isoformat()}) window has only "
+                    f"{prior.treated_group_size} use(s) of {action_type!r} to "
+                    "compare the recent window against, so no reliable trend "
+                    "baseline exists."
+                ),
+                **base,
+            )
+
+        ci = newcombe_difference_interval(
+            recent.recovered_treated_events,
+            recent.treated_group_size,
+            prior.recovered_treated_events,
+            prior.treated_group_size,
+        )
+        if ci.low > 0.0:
+            direction = "improving"
+        elif ci.high < 0.0:
+            direction = "declining"
+        else:
+            direction = "stable_or_insufficient_data"
+
+        return ActionLiftTrendResponse(
+            computable=True,
+            reason=None,
+            recent_window_lift=recent.observed_incremental_lift,
+            baseline_window_lift=prior.observed_incremental_lift,
+            recent_window_action_recovery_rate=(
+                recent.observed_recovery_rate_for_action
+            ),
+            baseline_window_action_recovery_rate=(
+                prior.observed_recovery_rate_for_action
+            ),
+            recent_window_control_recovery_rate=(
+                recent.baseline_control_recovery_rate
+            ),
+            baseline_window_control_recovery_rate=(
+                prior.baseline_control_recovery_rate
+            ),
+            trend_direction=direction,
+            trend_confidence_interval=ci.as_list(),
+            confidence_method="newcombe_wilson_95_difference",
+            sample_size_note=self._lift_trend_note(
+                action_type, recent, prior, ci, direction
+            ),
+            **base,
+        )
+
+    @staticmethod
+    def _lift_trend_note(
+        action_type: str, recent, prior, ci, direction: str
+    ) -> str:
+        lo, hi = ci.as_list()
+        parts = [
+            f"Compares {action_type}'s recovery rate in the recent window "
+            f"({recent.observed_recovery_rate_for_action} over "
+            f"{recent.treated_group_size} uses) against the prior window "
+            f"({prior.observed_recovery_rate_for_action} over "
+            f"{prior.treated_group_size} uses).",
+            f"95% CI for (recent - prior) recovery rate: [{lo}, {hi}] "
+            "(Newcombe/Wilson, the same method as the all-time incrementality "
+            "and batch recovery-impact metrics; not a p-value).",
+        ]
+        if direction == "stable_or_insufficient_data":
+            parts.append(
+                "The interval includes zero, so there is no trend distinguishable "
+                "from sampling noise at this volume."
+            )
+        else:
+            parts.append(
+                f"The interval excludes zero, so the {direction} trend is "
+                "unlikely to be sampling noise at this volume."
+            )
+        rc = recent.baseline_control_recovery_rate
+        pc = prior.baseline_control_recovery_rate
+        if rc is not None and pc is not None:
+            parts.append(
+                f"Control-arm recovery rate over the same windows: {pc} -> {rc}. "
+                "A large control-arm shift would point to a system-wide change "
+                f"rather than something specific to {action_type!r}."
             )
         return " ".join(parts)
 

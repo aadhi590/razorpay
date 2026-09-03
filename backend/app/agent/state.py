@@ -30,6 +30,8 @@ class RecoveryAgentState:
     quantitative_scores: list[dict[str, Any]] | None = None
     # observed historical incrementality the agent looked up, keyed by action_type
     action_incrementality: dict[str, Any] | None = None
+    # observed recent-vs-baseline lift trend the agent looked up, keyed by action_type
+    action_lift_trend: dict[str, Any] | None = None
 
     # ---- application-tracked facts (not fed to Gemini directly) -------
     actions_attempted: list[str] = field(default_factory=list)   # from DB + this run

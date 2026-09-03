@@ -12,13 +12,19 @@ import {
   Square,
   Zap,
 } from "lucide-react";
-import type { ActionIncrementality, ToolTraceEntry } from "@/lib/types";
+import type {
+  ActionIncrementality,
+  ActionLiftTrend,
+  ToolTraceEntry,
+} from "@/lib/types";
 import { phaseFor, type Phase } from "./toolMap";
 import { IncrementalityCompare } from "./IncrementalityCompare";
+import { LiftTrendCompare } from "./LiftTrendCompare";
 import { actionLabel, ms } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 const INCREMENTALITY_TOOL = "get_historical_incrementality_for_action";
+const LIFT_TREND_TOOL = "get_action_lift_trend";
 
 const KIND_ICON: Record<Phase["kind"], typeof Eye> = {
   observe: Eye,
@@ -89,11 +95,13 @@ function Row({
   index,
   animate,
   incrementality,
+  liftTrend,
 }: {
   entry: ToolTraceEntry;
   index: number;
   animate: boolean;
   incrementality?: ActionIncrementality;
+  liftTrend?: ActionLiftTrend;
 }) {
   const phase = phaseFor(entry.tool);
   const Icon = entry.ok
@@ -162,6 +170,9 @@ function Row({
         {entry.tool === INCREMENTALITY_TOOL && entry.ok && incrementality ? (
           <IncrementalityCompare data={incrementality} />
         ) : null}
+        {entry.tool === LIFT_TREND_TOOL && entry.ok && liftTrend ? (
+          <LiftTrendCompare data={liftTrend} />
+        ) : null}
         <TechnicalDetails entry={entry} />
       </div>
     </li>
@@ -173,11 +184,13 @@ export function AgentTimeline({
   animate = true,
   live = false,
   actionIncrementality,
+  actionLiftTrend,
 }: {
   trace: ToolTraceEntry[];
   animate?: boolean;
   live?: boolean;
   actionIncrementality?: Record<string, ActionIncrementality> | null;
+  actionLiftTrend?: Record<string, ActionLiftTrend> | null;
 }) {
   const [revealed, setRevealed] = useState(live ? 0 : trace.length);
 
@@ -218,6 +231,11 @@ export function AgentTimeline({
           incrementality={
             typeof entry.arguments?.action_type === "string"
               ? actionIncrementality?.[entry.arguments.action_type as string]
+              : undefined
+          }
+          liftTrend={
+            typeof entry.arguments?.action_type === "string"
+              ? actionLiftTrend?.[entry.arguments.action_type as string]
               : undefined
           }
         />

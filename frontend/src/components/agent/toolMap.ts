@@ -46,6 +46,12 @@ export const TOOL_PHASES: Record<string, Phase> = {
       "Compare the model's predicted uplift against the action's real, measured historical lift",
     kind: "intelligence",
   },
+  get_action_lift_trend: {
+    label: "Trend check",
+    description:
+      "Check whether the action's real-world effectiveness is trending — recent window vs. earlier",
+    kind: "intelligence",
+  },
   execute_recovery_action: {
     label: "Execute",
     description: "Run the chosen action — create a Razorpay recovery Payment Link",

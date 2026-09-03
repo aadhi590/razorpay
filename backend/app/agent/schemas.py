@@ -120,5 +120,8 @@ class AgentRunResult(BaseModel):
     # observed historical incrementality the agent consulted this run, if any,
     # keyed by action_type (from get_historical_incrementality_for_action)
     action_incrementality: dict[str, Any] | None = None
+    # observed recent-vs-baseline lift trend the agent consulted this run, if any,
+    # keyed by action_type (from get_action_lift_trend)
+    action_lift_trend: dict[str, Any] | None = None
     tool_trace: list[ToolTraceEntry] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
