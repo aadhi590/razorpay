@@ -1,6 +1,7 @@
+from dataclasses import asdict
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -9,10 +10,13 @@ from app.schemas.analytics import (
     AssignmentCoverageResponse,
     ControlVsTreatmentResponse,
     ExperimentsResponse,
+    PortfolioAllocationResponse,
     RecoveryImpactResponse,
     SummaryResponse,
 )
 from app.services.analytics_service import AnalyticsService
+from app.services.policy_factory import DEFAULT_POLICY, POLICY_NAMES
+from app.services.portfolio_allocator import PortfolioAllocator
 
 router = APIRouter(
     prefix="/api/v1/analytics",
@@ -105,6 +109,47 @@ def analytics_recovery_impact(
     return AnalyticsService(db).recovery_impact(
         since=since, experiment_id=experiment_id
     )
+
+
+@router.get(
+    "/portfolio-allocation",
+    response_model=PortfolioAllocationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def analytics_portfolio_allocation(
+    capacity: int | None = Query(
+        default=None,
+        ge=1,
+        description=(
+            "How many of the currently-open eligible recovery events can be "
+            "acted on this batch. Optional; a small sensible default is used "
+            "when omitted."
+        ),
+    ),
+    policy: str = Query(
+        default=DEFAULT_POLICY,
+        description=f"Scoring policy for the expected-value ranking: one of {POLICY_NAMES}.",
+    ),
+    db: Session = Depends(get_db),
+) -> PortfolioAllocationResponse:
+    """READ-ONLY. Rank the batch of currently-open eligible recovery events by
+    expected value (net of action cost, from the same policy scoring the
+    orchestrator uses), apply the capacity constraint, and report exactly which
+    events to act on, which to skip and precisely why, plus the expected value
+    the capacity limit costs you.
+
+    Executes nothing: no Intervention is created, no state is mutated. Acting on
+    an "act"-ranked event still goes through the normal agent-run endpoint and
+    the existing guardrails. Returns ``computable: false`` when no open
+    non-control event currently passes the guardrail actionability check."""
+    try:
+        allocator = PortfolioAllocator(db, policy_name=policy)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        )
+    result = allocator.allocate(capacity=capacity)
+    return PortfolioAllocationResponse(**asdict(result))
 
 
 @router.get(

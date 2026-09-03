@@ -26,6 +26,7 @@ import type {
   OutcomeListItem,
   Payment,
   PaymentListItem,
+  PortfolioAllocation,
   RecoveryEvent,
   RecoveryEventListItem,
   RecoveryEventRazorpay,
@@ -80,6 +81,17 @@ export const useRecoveryImpact = () =>
     queryKey: ["analytics", "impact"],
     queryFn: () => api.get<RecoveryImpact>("/api/v1/analytics/recovery-impact"),
     staleTime: MIN,
+  });
+
+export const usePortfolioAllocation = (capacity: number) =>
+  useQuery({
+    queryKey: ["analytics", "portfolio-allocation", capacity],
+    queryFn: () =>
+      api.get<PortfolioAllocation>(
+        `/api/v1/analytics/portfolio-allocation?capacity=${capacity}`,
+      ),
+    staleTime: MIN,
+    placeholderData: keepPreviousData,
   });
 
 // ---- model cards ----------------------------------------------------

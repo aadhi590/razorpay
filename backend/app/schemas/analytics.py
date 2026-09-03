@@ -6,6 +6,7 @@ Rate fields are plain ``float`` ratios in the range ``[0, 1]`` (multiply by
 """
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel
@@ -142,6 +143,73 @@ class ActionIncrementalityResponse(BaseModel):
 
     sample_size_note: str
     confidence_method: str  # "newcombe_wilson_95_difference" | "not_computed"
+
+
+class PortfolioAllocationEvent(BaseModel):
+    """One recovery event's place in the capacity allocation.
+
+    ``expected_value_paise`` is the best available action's expected value **net
+    of its cost** (``P(recover) * amount_paise - action_cost_paise``), taken from
+    the same policy scoring the orchestrator uses. ``rank`` is 1-based across all
+    events that had at least one candidate action; ``None`` only when the policy
+    proposed no action at all. ``reason`` is always specific: for a skipped event
+    it names the rank cutoff it fell below (or that its best action has
+    non-positive expected value), never a generic "not enough budget".
+    """
+
+    recovery_event_id: int
+    payment_id: int
+    priority: int
+    amount_paise: int
+    failure_reason: str | None
+    best_action: str | None
+    expected_value_paise: float | None
+    recovery_probability: float | None
+    action_cost_paise: int | None
+    rank: int | None
+    decision: str  # "act" | "skip"
+    reason: str
+
+
+class PortfolioAllocationResponse(BaseModel):
+    """Deterministic, read-only allocation of a limited intervention capacity
+    across the batch of currently-open eligible recovery events.
+
+    Monetary fields are integer-ish **paise** floats (rounded to 2 dp), matching
+    the ``recovery-impact`` convention rather than the Decimal-rupee endpoints.
+
+    ``computable`` is ``False`` (with ``reason`` set, ``act`` / ``skip`` empty,
+    money fields ``0``) when no open non-control event currently passes the
+    guardrail actionability check -- the endpoint never fabricates a ranking from
+    an empty batch.
+
+    ``expected_value_if_unlimited_paise`` is the expected value that would be
+    captured by acting on **every** positive-value eligible event;
+    ``expected_value_forgone_to_capacity_paise`` is the difference -- what the
+    capacity limit costs you in expected terms (``>= 0``; ``0`` when capacity
+    does not bind).
+    """
+
+    computable: bool
+    reason: str | None = None
+    policy: str
+    capacity: int
+    ranking_basis: str  # "raw_expected_value"
+    generated_at: datetime
+
+    total_open_eligible_events: int
+    events_ranked: int
+    events_without_actionable_option: int
+    capacity_used: int
+
+    act: list[PortfolioAllocationEvent]
+    skip: list[PortfolioAllocationEvent]
+
+    expected_value_captured_paise: float
+    expected_value_if_unlimited_paise: float
+    expected_value_forgone_to_capacity_paise: float
+
+    note: str
 
 
 class RecoveryImpactResponse(BaseModel):

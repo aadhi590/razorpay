@@ -6,6 +6,7 @@ import { Skeleton, StatSkeleton } from "@/components/ui/Skeleton";
 import { QueryBoundary } from "@/components/ui/QueryBoundary";
 import { ErrorState } from "@/components/ui/States";
 import { ActionRateChart, ReliabilityBars } from "@/components/charts/Charts";
+import { PortfolioAllocation } from "@/components/analytics/PortfolioAllocation";
 import {
   useRecoveryImpact,
   useControlVsTreatment,
@@ -216,6 +217,17 @@ export default function Analytics() {
           </CardBody>
         </Card>
       </div>
+
+      {/* portfolio scarcity allocation */}
+      <h2 className="mb-3 mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+        Batch allocation
+      </h2>
+      <p className="mb-3 max-w-2xl text-[13px] leading-relaxed text-ink-muted">
+        The agent decides one event at a time. This ranks every currently-open
+        eligible event by expected value and shows what a limited number of
+        interventions can and cannot cover — and what that limit costs.
+      </p>
+      <PortfolioAllocation />
 
       {/* model intelligence */}
       <h2 className="mb-3 mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint">

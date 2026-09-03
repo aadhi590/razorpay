@@ -97,6 +97,42 @@ export interface RecoveryImpact {
   confidence_method: string;
 }
 
+/** app/schemas/analytics.py::PortfolioAllocationEvent */
+export interface PortfolioAllocationEvent {
+  recovery_event_id: number;
+  payment_id: number;
+  priority: number;
+  amount_paise: number;
+  failure_reason: string | null;
+  best_action: string | null;
+  expected_value_paise: number | null;
+  recovery_probability: number | null;
+  action_cost_paise: number | null;
+  rank: number | null;
+  decision: "act" | "skip";
+  reason: string;
+}
+
+/** app/schemas/analytics.py::PortfolioAllocationResponse */
+export interface PortfolioAllocation {
+  computable: boolean;
+  reason: string | null;
+  policy: string;
+  capacity: number;
+  ranking_basis: string;
+  generated_at: string;
+  total_open_eligible_events: number;
+  events_ranked: number;
+  events_without_actionable_option: number;
+  capacity_used: number;
+  act: PortfolioAllocationEvent[];
+  skip: PortfolioAllocationEvent[];
+  expected_value_captured_paise: number;
+  expected_value_if_unlimited_paise: number;
+  expected_value_forgone_to_capacity_paise: number;
+  note: string;
+}
+
 // ---- core records -------------------------------------------------------
 export interface RecoveryEventListItem {
   id: number;
