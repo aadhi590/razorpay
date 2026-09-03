@@ -56,6 +56,28 @@ class Settings(BaseSettings):
     # engine wired in this stage.
     TTS_ENGINE: str = "pyttsx3"
 
+    # --- Recovery Scheduler (app/services/recovery_scheduler.py) -------
+    # A lightweight, in-process periodic auto-trigger for the recovery agent.
+    # No Celery / Redis / task queue: a single daemon thread that, once per
+    # interval, asks the existing PortfolioAllocator for the ranked "act" set
+    # (capacity = SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE) and then runs the *exact*
+    # existing agent-run code path on each of those events, tagged
+    # ``triggered_by="scheduler"``. OFF by default: when SCHEDULER_ENABLED is
+    # false the timer never starts and behaviour is identical to before this
+    # feature existed.
+    SCHEDULER_ENABLED: bool = False
+    SCHEDULER_INTERVAL_SECONDS: float = 300.0
+    # Hard cap on scheduler-triggered agent runs per cycle. The scheduler can
+    # never exceed this in a cycle even if more eligible events exist.
+    SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE: int = 3
+    # DRY RUN by default: scheduler-triggered runs simulate action execution
+    # and persist no Intervention -- exactly the manual endpoint's default.
+    SCHEDULER_DRY_RUN: bool = True
+    # Scoring policy the PortfolioAllocator uses to rank the batch.
+    SCHEDULER_POLICY: str = "rules"
+    # How many recent cycle records GET /api/v1/scheduler/status keeps.
+    SCHEDULER_CYCLE_HISTORY_SIZE: int = 20
+
     # --- Frontend / browser access (app/main.py CORS) -----------------
     # Comma-separated list of exact browser origins allowed to call this API.
     # Read-only dashboard + the single agent-run POST; no cookies, no auth

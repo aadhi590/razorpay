@@ -39,7 +39,9 @@ def run_agent(
     db: Session = Depends(get_db),
 ) -> AgentRunResult:
     try:
-        return run_recovery_agent(db, recovery_event_id, dry_run=dry_run)
+        return run_recovery_agent(
+            db, recovery_event_id, dry_run=dry_run, triggered_by="manual"
+        )
     except AgentRunError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND

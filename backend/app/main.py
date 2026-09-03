@@ -1,9 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text  # type: ignore[reportMissingImports]
 
 from app.config import settings
 from app.database import engine
+from app.services.recovery_scheduler import scheduler
 from app.routes import (
     customers_router,
     subscriptions_router,
@@ -22,12 +25,27 @@ from app.routes import (
     webhooks_router,
     razorpay_inspect_router,
     voice_router,
+    scheduler_router,
 )
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # The Recovery Scheduler is a daemon thread. start() is a no-op unless
+    # SCHEDULER_ENABLED is true, so importing/serving the app is unchanged when
+    # the feature is off.
+    scheduler.reload_config()
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.stop()
 
 
 app = FastAPI(
     title="Razorpay AI Recovery Orchestrator",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Browser access for the read-only dashboard frontend. Only the exact origins
@@ -61,6 +79,7 @@ app.include_router(agent_router)
 app.include_router(webhooks_router)
 app.include_router(razorpay_inspect_router)
 app.include_router(voice_router)
+app.include_router(scheduler_router)
 
 
 @app.get("/")

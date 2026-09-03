@@ -15,6 +15,7 @@ from app.routes.agent import router as agent_router
 from app.routes.webhooks import router as webhooks_router
 from app.routes.razorpay_inspect import router as razorpay_inspect_router
 from app.routes.voice import router as voice_router
+from app.routes.scheduler import router as scheduler_router
 
 __all__ = [
     "customers_router",
@@ -34,4 +35,5 @@ __all__ = [
     "webhooks_router",
     "razorpay_inspect_router",
     "voice_router",
+    "scheduler_router",
 ]

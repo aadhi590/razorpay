@@ -52,7 +52,12 @@ def run_recovery_agent(
     persist: bool = True,
     razorpay_client: object | None = None,
     voice_service: object | None = None,
+    triggered_by: str = "manual",
 ) -> AgentRunResult:
+    """``triggered_by`` is recorded verbatim in the persisted trace
+    (``AgentEvent.input_context`` and every ``AuditLog`` row this run writes) so
+    a scheduler-driven run is always distinguishable from a manual one. It is
+    metadata only: it never changes what the agent does."""
     config = config or AgentConfig.from_settings()
 
     event = load_event(db, recovery_event_id)
@@ -73,7 +78,7 @@ def run_recovery_agent(
             state.errors.append(str(exc))
             result = _to_result(state, config.model, run_id)
             if persist:
-                _persist(db, event.id, run_id, result, dry_run)
+                _persist(db, event.id, run_id, result, dry_run, triggered_by)
             return result
 
     agent = RecoveryAgent(
@@ -85,7 +90,7 @@ def run_recovery_agent(
                         else config.model, run_id)
 
     if persist:
-        _persist(db, event.id, run_id, result, dry_run)
+        _persist(db, event.id, run_id, result, dry_run, triggered_by)
         db.commit()
     return result
 
@@ -146,12 +151,14 @@ def _persist(
     run_id: str,
     result: AgentRunResult,
     dry_run: bool,
+    triggered_by: str = "manual",
 ) -> None:
     trace_ctx: dict[str, Any] = {
         "agent_run_id": run_id,
         "agent": "gemini",
         "model": result.model,
         "dry_run": dry_run,
+        "triggered_by": triggered_by,
         "status": result.status,
         "stop_reason": result.stop_reason,
         "decision": result.decision,
@@ -199,6 +206,7 @@ def _persist(
             reason=(result.reasoning_summary or result.stop_reason)[:500],
             event_metadata={
                 "agent_run_id": run_id,
+                "triggered_by": triggered_by,
                 "dry_run": dry_run,
                 "decision": result.decision,
                 "stop_reason": result.stop_reason,
@@ -214,7 +222,11 @@ def _persist(
                 actor=AGENT_ACTOR,
                 action=f"agent_action_{rec}_{'simulated' if dry_run else 'executed'}",
                 reason=result.reasoning_summary[:500],
-                event_metadata={"agent_run_id": run_id, "dry_run": dry_run},
+                event_metadata={
+                    "agent_run_id": run_id,
+                    "triggered_by": triggered_by,
+                    "dry_run": dry_run,
+                },
             )
         )
 
