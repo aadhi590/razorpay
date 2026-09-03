@@ -46,6 +46,12 @@ export function RecoveryJourney({ stages }: { stages: Stage[] }) {
     <ol className="relative">
       {stages.map((stage, i) => {
         const meta = STATE_META[stage.state];
+        // An accent-toned stage that has actually happened (the agent's
+        // decision) renders in the accent — its defined "AI decision" meaning.
+        const accentDone = stage.tone === "accent" && stage.state === "done";
+        const ring = accentDone
+          ? "bg-accent/12 text-accent ring-accent/35"
+          : meta.ring;
         const Icon = stage.tone === "success" ? Check : meta.icon;
         const isLast = i === stages.length - 1;
         return (
@@ -58,7 +64,7 @@ export function RecoveryJourney({ stages }: { stages: Stage[] }) {
               <span
                 className={cn(
                   "grid size-8 shrink-0 place-items-center rounded-full ring-1 ring-inset transition-colors",
-                  meta.ring,
+                  ring,
                 )}
               >
                 <Icon size={14} strokeWidth={2.4} />
@@ -72,7 +78,7 @@ export function RecoveryJourney({ stages }: { stages: Stage[] }) {
                 className={cn(
                   "text-[13px] font-semibold leading-tight",
                   meta.text,
-                  stage.state === "current" && "text-accent",
+                  (stage.state === "current" || accentDone) && "text-accent",
                 )}
               >
                 {stage.title}

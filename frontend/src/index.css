@@ -10,15 +10,18 @@
    ========================================================================== */
 :root,
 .theme-dark {
-  --bg: 9 10 12;
-  --surface: 15 17 21;
-  --surface-2: 21 24 30;
-  --surface-3: 28 32 40;
+  --bg: 8 9 11;
+  /* Wider luminance steps between layers so panels read as elevated, not
+     outlined. A black drop-shadow can't register on a near-black page, so
+     depth here is carried by surface contrast + a top edge-highlight. */
+  --surface: 19 21 26;
+  --surface-2: 27 30 37;
+  --surface-3: 36 40 49;
   --line: 255 255 255; /* used at low alpha */
   --line-strong: 255 255 255;
   --ink: 237 239 243;
-  --ink-muted: 155 161 173;
-  --ink-faint: 108 114 126;
+  --ink-muted: 156 162 174;
+  --ink-faint: 112 118 130;
 
   --accent: 124 140 255;
   --accent-soft: 124 140 255;
@@ -29,22 +32,30 @@
   --danger: 251 113 133;
   --danger-soft: 251 113 133;
 
-  --line-alpha: 0.08;
-  --line-strong-alpha: 0.14;
+  --line-alpha: 0.09;
+  --line-strong-alpha: 0.16;
   --soft-alpha: 0.12;
+  /* One theme-aware elevation: a crisp top edge-highlight (light catching the
+     panel lip) over a deeper ambient shadow. This is what makes a dark panel
+     sit above the page. */
+  --panel-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.05),
+    0 1px 2px 0 rgb(0 0 0 / 0.4), 0 16px 40px -18px rgb(0 0 0 / 0.6);
+  --hero-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.06),
+    0 2px 6px 0 rgb(0 0 0 / 0.4), 0 28px 60px -22px rgb(var(--accent) / 0.3);
   color-scheme: dark;
 }
 
 .theme-light {
-  --bg: 249 249 248;
+  /* A hair off pure white so the white cards lift off the page. */
+  --bg: 246 246 244;
   --surface: 255 255 255;
-  --surface-2: 246 246 245;
-  --surface-3: 240 240 238;
+  --surface-2: 244 244 242;
+  --surface-3: 236 236 233;
   --line: 15 20 30;
   --line-strong: 15 20 30;
   --ink: 22 26 34;
-  --ink-muted: 90 97 110;
-  --ink-faint: 138 144 156;
+  --ink-muted: 88 95 108;
+  --ink-faint: 132 138 150;
 
   --accent: 79 70 229;
   --accent-soft: 99 102 241;
@@ -55,9 +66,13 @@
   --danger: 225 29 72;
   --danger-soft: 244 63 94;
 
-  --line-alpha: 0.09;
-  --line-strong-alpha: 0.16;
+  --line-alpha: 0.1;
+  --line-strong-alpha: 0.18;
   --soft-alpha: 0.1;
+  --panel-shadow: 0 1px 2px 0 rgb(15 20 30 / 0.05),
+    0 12px 32px -14px rgb(15 20 30 / 0.14);
+  --hero-shadow: 0 1px 3px 0 rgb(15 20 30 / 0.06),
+    0 24px 52px -20px rgb(var(--accent) / 0.22);
   color-scheme: light;
 }
 
@@ -75,8 +90,8 @@
     /* a single, cheap, static vignette for depth — no extra layers, no mask */
     background-image: radial-gradient(
       120% 60% at 50% -10%,
-      rgb(var(--accent) / 0.06),
-      transparent 60%
+      rgb(var(--accent) / 0.09),
+      transparent 62%
     );
     background-attachment: fixed;
     color: rgb(var(--ink));
@@ -108,11 +123,41 @@
     background-color: rgb(var(--surface));
     border: 1px solid rgb(var(--line) / var(--line-alpha));
     border-radius: theme("borderRadius.card");
+    box-shadow: var(--panel-shadow);
   }
   .panel-2 {
     background-color: rgb(var(--surface-2));
     border: 1px solid rgb(var(--line) / var(--line-alpha));
     border-radius: theme("borderRadius.control");
+  }
+  /* Reserved for AI/decision-earned surfaces only: a diagonal accent wash over
+     the base surface + an accent-tinted border + the panel elevation. Keeps the
+     accent meaningful — never used for routine list/table panels. */
+  .panel-accent {
+    background-color: rgb(var(--surface));
+    background-image: linear-gradient(
+      135deg,
+      rgb(var(--accent) / 0.1),
+      rgb(var(--accent) / 0.025) 55%,
+      transparent
+    );
+    border: 1px solid rgb(var(--accent) / 0.24);
+    border-radius: theme("borderRadius.card");
+    box-shadow: var(--panel-shadow);
+  }
+  /* The one headline "wow" surface (hero KPI / causal-lift callout). Same accent
+     wash, stronger elevation with an accent-tinted ambient glow. */
+  .panel-hero {
+    background-color: rgb(var(--surface));
+    background-image: linear-gradient(
+      135deg,
+      rgb(var(--accent) / 0.12),
+      rgb(var(--accent) / 0.03) 58%,
+      transparent
+    );
+    border: 1px solid rgb(var(--accent) / 0.26);
+    border-radius: theme("borderRadius.card");
+    box-shadow: var(--hero-shadow);
   }
   .hairline {
     border-color: rgb(var(--line) / var(--line-alpha));

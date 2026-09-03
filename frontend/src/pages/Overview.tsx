@@ -78,9 +78,9 @@ export default function Overview() {
         </div>
       ) : s ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="panel flex flex-col justify-between p-5 shadow-panel sm:col-span-2 lg:col-span-2">
+          <div className="panel-hero flex flex-col justify-between p-5 sm:col-span-2 lg:col-span-2">
             <div className="label-caps">Revenue recovered</div>
-            <div className="mt-2 font-semibold leading-none tracking-tight text-success tnum text-[clamp(2.4rem,6vw,3.6rem)]">
+            <div className="mt-2 font-bold leading-none tracking-tight text-success tnum text-[clamp(2.4rem,6vw,3.6rem)]">
               <HeroRecovered rupees={recoveredRupees} />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
@@ -98,17 +98,17 @@ export default function Overview() {
               )}
             </div>
             {impact.data?.computable && impact.data.incremental_recovery_rate_ci_95 ? (
-              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line/[.07] pt-3 text-2xs">
-                <span className="size-1.5 rounded-full bg-success" aria-hidden />
-                <span className="font-semibold tabular-nums text-ink">
-                  {pp(impact.data.incremental_recovery_rate)} incremental recovery
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-control bg-accent/[.09] px-3 py-2.5 ring-1 ring-inset ring-accent/25">
+                <span className="text-lg font-bold tabular-nums text-accent">
+                  {pp(impact.data.incremental_recovery_rate)}
                 </span>
-                <span className="tabular-nums text-ink-muted">
+                <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-accent/90">
+                  incremental recovery
+                </span>
+                <span className="text-2xs tabular-nums text-ink-muted">
                   · 95% CI {pct(impact.data.incremental_recovery_rate_ci_95[0])}–
-                  {pct(impact.data.incremental_recovery_rate_ci_95[1])}
-                </span>
-                <span className="text-success">
-                  · measured, not modelled
+                  {pct(impact.data.incremental_recovery_rate_ci_95[1])} · measured,
+                  not modelled
                 </span>
               </div>
             ) : null}

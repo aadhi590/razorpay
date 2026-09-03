@@ -63,9 +63,9 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           className={({ isActive }) =>
             cn(
-              "group flex items-center gap-2.5 rounded-control px-3 py-2 text-[13px] font-medium transition-colors",
+              "group relative flex items-center gap-2.5 rounded-control px-3 py-2 text-[13px] font-medium transition-colors",
               isActive
-                ? "bg-surface-3 text-ink"
+                ? "bg-accent/[.1] text-ink ring-1 ring-inset ring-accent/25 before:absolute before:inset-y-1.5 before:-left-px before:w-0.5 before:rounded-full before:bg-accent before:content-['']"
                 : "text-ink-muted hover:bg-surface-2 hover:text-ink",
             )
           }
@@ -199,7 +199,7 @@ export function PageHeader({
     <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
         {eyebrow ? <div className="label-caps mb-1.5">{eyebrow}</div> : null}
-        <h1 className="text-xl font-semibold tracking-tight text-ink sm:text-[22px]">
+        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-[22px]">
           {title}
         </h1>
         {description ? (

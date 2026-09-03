@@ -254,7 +254,7 @@ export default function RecoveryDetail() {
             <Skeleton className="h-9 w-48" />
           ) : r ? (
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight text-ink tnum">
+              <h1 className="text-3xl font-bold tracking-tight text-ink tnum">
                 {rupeesFromPaise(r.amount_paise, true)}
               </h1>
               <Badge

@@ -59,10 +59,10 @@ function DecisionSummary({
       className={cn(
         "rounded-control border p-4",
         escalated
-          ? "border-warning/25 bg-warning/[.06]"
+          ? "border-warning/25 bg-warning/[.07]"
           : failedSafe
             ? "border-line/[.1] bg-surface-2"
-            : "border-accent/25 bg-accent/[.05]",
+            : "border-accent/30 border-l-2 border-l-accent bg-accent/[.08]",
       )}
     >
       <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ function DecisionSummary({
         </span>
         <div>
           <p className="label-caps">Agent decision</p>
-          <p className="text-[14px] font-semibold text-ink">
+          <p className="text-[15px] font-bold text-ink">
             {chosenAction
               ? `Execute ${actionLabel(chosenAction)}`
               : escalated

@@ -35,8 +35,12 @@ export default {
         chip: "7px",
       },
       boxShadow: {
-        panel: "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.18)",
-        pop: "0 8px 32px -8px rgb(0 0 0 / 0.32)",
+        // theme-aware: --panel-shadow carries a top edge-highlight + ambient
+        // shadow tuned per theme (see src/index.css). A static black shadow is
+        // invisible on the near-black dark background.
+        panel: "var(--panel-shadow)",
+        hero: "var(--hero-shadow)",
+        pop: "0 8px 32px -8px rgb(0 0 0 / 0.4)",
         glow: "0 0 0 1px rgb(var(--accent) / 0.35), 0 0 28px -6px rgb(var(--accent) / 0.45)",
       },
       keyframes: {

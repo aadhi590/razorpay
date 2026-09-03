@@ -90,10 +90,12 @@ export default function Analytics() {
           </div>
 
           {impact.data.incremental_recovery_rate_ci_95 ? (
-            <div className="mt-3 flex flex-col gap-2 rounded-control border border-line/[.08] bg-surface-2 p-3.5 sm:flex-row sm:items-center sm:gap-4">
+            <div className="mt-3 flex flex-col gap-2 rounded-control bg-accent/[.08] p-3.5 ring-1 ring-inset ring-accent/25 sm:flex-row sm:items-center sm:gap-4">
               <div className="shrink-0">
-                <div className="label-caps mb-1">95% confidence interval</div>
-                <div className="font-mono text-[15px] font-semibold text-ink tnum">
+                <div className="label-caps mb-1 text-accent/90">
+                  95% confidence interval
+                </div>
+                <div className="font-mono text-[17px] font-bold text-accent tnum">
                   {pct(impact.data.incremental_recovery_rate_ci_95[0])} –{" "}
                   {pct(impact.data.incremental_recovery_rate_ci_95[1])}
                 </div>
@@ -219,7 +221,8 @@ export default function Analytics() {
       </div>
 
       {/* portfolio scarcity allocation */}
-      <h2 className="mb-3 mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+      <h2 className="mb-3 mt-8 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+        <span className="h-3.5 w-0.5 rounded-full bg-accent/60" aria-hidden />
         Batch allocation
       </h2>
       <p className="mb-3 max-w-2xl text-[13px] leading-relaxed text-ink-muted">
@@ -230,7 +233,8 @@ export default function Analytics() {
       <PortfolioAllocation />
 
       {/* model intelligence */}
-      <h2 className="mb-3 mt-8 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+      <h2 className="mb-3 mt-8 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+        <span className="h-3.5 w-0.5 rounded-full bg-accent/60" aria-hidden />
         Model intelligence
       </h2>
       <div className="grid gap-3 lg:grid-cols-2">

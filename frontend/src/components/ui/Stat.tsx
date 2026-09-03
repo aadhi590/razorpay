@@ -34,8 +34,10 @@ export function Stat({
       <div className="label-caps">{label}</div>
       <div
         className={cn(
-          "mt-2 font-semibold tracking-tight tnum",
-          hero ? "text-[clamp(1.9rem,4vw,2.9rem)] leading-none" : "text-2xl",
+          "mt-2 tracking-tight tnum",
+          hero
+            ? "text-[clamp(1.9rem,4vw,2.9rem)] font-bold leading-none"
+            : "text-2xl font-semibold",
           toneText,
         )}
       >

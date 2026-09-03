@@ -10,7 +10,8 @@ export function Card({
   className?: string;
   as?: "div" | "section" | "article";
 }) {
-  return <As className={cn("panel shadow-panel", className)}>{children}</As>;
+  // `.panel` already carries the theme-aware elevation shadow.
+  return <As className={cn("panel", className)}>{children}</As>;
 }
 
 export function CardHeader({
@@ -59,7 +60,8 @@ export function SectionTitle({
 }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+      <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+        <span className="h-3.5 w-0.5 rounded-full bg-accent/60" aria-hidden />
         {children}
       </h2>
       {hint ? <span className="text-xs text-ink-faint">{hint}</span> : null}
