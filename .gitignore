@@ -1,0 +1,37 @@
+# ── secrets / local environment ───────────────────────────────
+# Real credentials live only in backend/.env (Gemini + Razorpay keys).
+# Never commit them. .env.example files ARE tracked.
+**/.env
+**/.env.local
+**/.env.*.local
+.env
+
+# ── python ────────────────────────────────────────────────────
+**/__pycache__/
+*.py[cod]
+*.pyo
+**/.venv/
+.venv/
+**/.pytest_cache/
+.pytest_cache/
+*.egg-info/
+
+# ── node / frontend build ─────────────────────────────────────
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/.vite/
+*.tsbuildinfo
+
+# ── generated artifacts (regenerated on demand) ───────────────
+# Trained ML/uplift model artifacts (backend/artifacts/ml/) ARE tracked so the
+# app runs out of the box; only the per-run TTS audio is transient.
+backend/artifacts/tts/
+
+# ── os / editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+*.swp

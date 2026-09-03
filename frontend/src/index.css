@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   RECLAIM — design tokens
+   One product, one palette. Colour communicates STATE, never decoration.
+   Dark is the default (AI-observability posture); light is a faithful mirror.
+   Values are space-separated RGB channels so Tailwind's `<alpha-value>` works.
+   ========================================================================== */
+:root,
+.theme-dark {
+  --bg: 9 10 12;
+  --surface: 15 17 21;
+  --surface-2: 21 24 30;
+  --surface-3: 28 32 40;
+  --line: 255 255 255; /* used at low alpha */
+  --line-strong: 255 255 255;
+  --ink: 237 239 243;
+  --ink-muted: 155 161 173;
+  --ink-faint: 108 114 126;
+
+  --accent: 124 140 255;
+  --accent-soft: 124 140 255;
+  --success: 52 211 153;
+  --success-soft: 52 211 153;
+  --warning: 251 191 36;
+  --warning-soft: 251 191 36;
+  --danger: 251 113 133;
+  --danger-soft: 251 113 133;
+
+  --line-alpha: 0.08;
+  --line-strong-alpha: 0.14;
+  --soft-alpha: 0.12;
+  color-scheme: dark;
+}
+
+.theme-light {
+  --bg: 249 249 248;
+  --surface: 255 255 255;
+  --surface-2: 246 246 245;
+  --surface-3: 240 240 238;
+  --line: 15 20 30;
+  --line-strong: 15 20 30;
+  --ink: 22 26 34;
+  --ink-muted: 90 97 110;
+  --ink-faint: 138 144 156;
+
+  --accent: 79 70 229;
+  --accent-soft: 99 102 241;
+  --success: 5 150 105;
+  --success-soft: 16 185 129;
+  --warning: 217 119 6;
+  --warning-soft: 245 158 11;
+  --danger: 225 29 72;
+  --danger-soft: 244 63 94;
+
+  --line-alpha: 0.09;
+  --line-strong-alpha: 0.16;
+  --soft-alpha: 0.1;
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: rgb(var(--bg));
+    /* a single, cheap, static vignette for depth — no extra layers, no mask */
+    background-image: radial-gradient(
+      120% 60% at 50% -10%,
+      rgb(var(--accent) / 0.06),
+      transparent 60%
+    );
+    background-attachment: fixed;
+    color: rgb(var(--ink));
+    font-family: theme("fontFamily.sans");
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Tabular, aligned numerals everywhere a figure appears. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  ::selection {
+    background: rgb(var(--accent) / 0.28);
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.014em;
+  }
+}
+
+@layer components {
+  .panel {
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    border-radius: theme("borderRadius.card");
+  }
+  .panel-2 {
+    background-color: rgb(var(--surface-2));
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    border-radius: theme("borderRadius.control");
+  }
+  .hairline {
+    border-color: rgb(var(--line) / var(--line-alpha));
+  }
+  .label-caps {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--ink-faint));
+  }
+  .link-quiet {
+    color: rgb(var(--ink-muted));
+    transition: color 0.15s ease;
+  }
+  .link-quiet:hover {
+    color: rgb(var(--ink));
+  }
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--surface-2));
+    border-radius: 6px;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--line) / 0.06),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* recharts polish */
+.recharts-cartesian-grid line {
+  stroke: rgb(var(--line) / 0.08);
+}
+.recharts-text {
+  fill: rgb(var(--ink-faint));
+  font-size: 11px;
+}
+.recharts-tooltip-wrapper {
+  outline: none;
+}

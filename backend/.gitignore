@@ -1,0 +1,13 @@
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Generated TTS audio (per-run, transient; regenerated on demand)
+artifacts/tts/

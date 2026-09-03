@@ -1,0 +1,692 @@
+{
+  "model_name": "uplift_recovery",
+  "model_version": "uplift_v1",
+  "created_at": "2026-09-02T09:34:57.807328+00:00",
+  "synthetic_benchmark": true,
+  "synthetic_warning": "Trained on synthetic data from app/scripts/generate_data.py --randomized-assignment, whose outcome process is a known closed form. Every uplift / Qini / policy-value number is a SYNTHETIC BENCHMARK, not real-world causal evidence. The control arm is small (tens of positives), so treat bootstrap intervals, not point estimates, as the result.",
+  "dataset": {
+    "dataset_version": "uds_28d868b23799",
+    "feature_version": "feat_v1",
+    "n_rows": 10771,
+    "n_recovery_events": 10771,
+    "n_customers": 4328,
+    "n_control": 2214,
+    "n_treatment": 8557,
+    "n_positive": 1061,
+    "control_recovery_rate": 0.026197,
+    "treatment_recovery_rate": 0.117214,
+    "naive_observed_lift": 0.091017,
+    "as_of_min": "2025-12-06 04:59:25.943879+00:00",
+    "as_of_max": "2026-09-02 02:18:34.094778+00:00",
+    "per_arm": {
+      "none": {
+        "rows": 2214,
+        "positives": 58,
+        "recovery_rate": 0.026197,
+        "distinct_events": 2214,
+        "mean_propensity": 0.2
+      },
+      "retry": {
+        "rows": 2181,
+        "positives": 175,
+        "recovery_rate": 0.080238,
+        "distinct_events": 2181,
+        "mean_propensity": 0.2
+      },
+      "sms_nudge": {
+        "rows": 2134,
+        "positives": 241,
+        "recovery_rate": 0.112933,
+        "distinct_events": 2134,
+        "mean_propensity": 0.2
+      },
+      "whatsapp_nudge": {
+        "rows": 2076,
+        "positives": 257,
+        "recovery_rate": 0.123796,
+        "distinct_events": 2076,
+        "mean_propensity": 0.2
+      },
+      "method_switch_prompt": {
+        "rows": 2166,
+        "positives": 330,
+        "recovery_rate": 0.152355,
+        "distinct_events": 2166,
+        "mean_propensity": 0.2
+      }
+    },
+    "n_dropped": 0,
+    "dropped_reason_counts": {}
+  },
+  "split": {
+    "strategy": "grouped(recovery_event) + chronological(min as_of)",
+    "fractions": [
+      0.6,
+      0.2,
+      0.2
+    ],
+    "train": {
+      "rows": 6463,
+      "events": 6463,
+      "customers": 3105,
+      "positives": 629,
+      "positive_rate": 0.097323,
+      "as_of_min": "2025-12-06 04:59:25.943879+00:00",
+      "as_of_max": "2026-06-07 22:13:00.937814+00:00"
+    },
+    "validation": {
+      "rows": 2154,
+      "events": 2154,
+      "customers": 1695,
+      "positives": 229,
+      "positive_rate": 0.106314,
+      "as_of_min": "2026-06-07 22:42:49.797738+00:00",
+      "as_of_max": "2026-07-21 16:01:03.870438+00:00"
+    },
+    "test": {
+      "rows": 2154,
+      "events": 2154,
+      "customers": 1704,
+      "positives": 203,
+      "positive_rate": 0.094243,
+      "as_of_min": "2026-07-21 16:21:02.906013+00:00",
+      "as_of_max": "2026-09-02 02:18:34.094778+00:00"
+    },
+    "event_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    }
+  },
+  "propensity_diagnostics": {
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "diagnostics": {
+      "propensity_range": {
+        "min": 0.2,
+        "max": 0.2,
+        "n_le_zero_or_nan": 0,
+        "n_gt_one": 0,
+        "n_below_min_threshold": 0,
+        "min_threshold": 0.001
+      },
+      "control_fraction": {
+        "design": 0.2,
+        "realized": 0.205552,
+        "abs_diff": 0.005552
+      },
+      "per_arm": {
+        "none": {
+          "rows": 2214,
+          "positives": 58,
+          "min_propensity": 0.2,
+          "max_propensity": 0.2
+        },
+        "retry": {
+          "rows": 2181,
+          "positives": 175,
+          "min_propensity": 0.2,
+          "max_propensity": 0.2
+        },
+        "sms_nudge": {
+          "rows": 2134,
+          "positives": 241,
+          "min_propensity": 0.2,
+          "max_propensity": 0.2
+        },
+        "whatsapp_nudge": {
+          "rows": 2076,
+          "positives": 257,
+          "min_propensity": 0.2,
+          "max_propensity": 0.2
+        },
+        "method_switch_prompt": {
+          "rows": 2166,
+          "positives": 330,
+          "min_propensity": 0.2,
+          "max_propensity": 0.2
+        }
+      },
+      "ipw": {
+        "stabilized_weight_mean": 1.000472217075114,
+        "stabilized_weight_max": 1.0277597251880048,
+        "effective_sample_size": 10766.0,
+        "n_rows": 10771,
+        "ess_fraction": 0.9995,
+        "n_extreme_weights": 0,
+        "max_weight_threshold": 50.0
+      },
+      "assignment_strategies": {
+        "uniform": 8557,
+        "randomized_control": 2214
+      },
+      "weighting_recommendation": "Assignment is uniform-randomized and overlap is near-perfect (ESS = 100% of n). Inverse-propensity weighting is NOT required for unbiased treatment/control and action contrasts on this dataset; it is implemented and reported only as a production-readiness diagnostic and as a variance check on the policy-value estimates."
+    }
+  },
+  "integrity": {
+    "passed": true,
+    "failures": [],
+    "warnings": [],
+    "checks": {
+      "predictive_validator": "passed on treatment slice",
+      "uplift_feature_sql_forbidden_tokens": [],
+      "post_decision_in_features": [],
+      "arms": [
+        "method_switch_prompt",
+        "none",
+        "retry",
+        "sms_nudge",
+        "whatsapp_nudge"
+      ],
+      "duplicate_events": 0,
+      "split_event_overlap": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      }
+    }
+  },
+  "model_comparison": {
+    "t_learner:hist_gb": {
+      "learner_type": "t_learner",
+      "base_algorithm": "hist_gb",
+      "validation": {
+        "qini_coefficient": 0.1897,
+        "policy_value": {
+          "estimator": "self_normalized_ipw_on_heldout_treated",
+          "treat_none_control_rate": 0.029787,
+          "random_action_value": 0.127672,
+          "best_marginal": {
+            "action": "method_switch_prompt",
+            "value": 0.174641,
+            "n_matched": 418
+          },
+          "uplift_policy": {
+            "value": 0.18267,
+            "n_matched": 427,
+            "gain_vs_random_action": 0.054998,
+            "gain_vs_treat_none": 0.152883
+          },
+          "recommended_action_distribution": {
+            "method_switch_prompt": 1346,
+            "whatsapp_nudge": 276,
+            "sms_nudge": 61,
+            "retry": 1
+          }
+        },
+        "uplift_at_k": [
+          {
+            "k_fraction": 0.1,
+            "n": 215,
+            "n_treated": 184,
+            "n_control": 31,
+            "treated_recovery_rate": 0.190217,
+            "control_recovery_rate": 0.096774,
+            "observed_uplift": 0.093443,
+            "mean_predicted_uplift": 0.18413
+          },
+          {
+            "k_fraction": 0.2,
+            "n": 431,
+            "n_treated": 361,
+            "n_control": 70,
+            "treated_recovery_rate": 0.180055,
+            "control_recovery_rate": 0.042857,
+            "observed_uplift": 0.137198,
+            "mean_predicted_uplift": 0.17097
+          },
+          {
+            "k_fraction": 0.3,
+            "n": 646,
+            "n_treated": 530,
+            "n_control": 116,
+            "treated_recovery_rate": 0.188679,
+            "control_recovery_rate": 0.051724,
+            "observed_uplift": 0.136955,
+            "mean_predicted_uplift": 0.1642
+          },
+          {
+            "k_fraction": 0.5,
+            "n": 1077,
+            "n_treated": 870,
+            "n_control": 207,
+            "treated_recovery_rate": 0.164368,
+            "control_recovery_rate": 0.043478,
+            "observed_uplift": 0.12089,
+            "mean_predicted_uplift": 0.15454
+          }
+        ]
+      },
+      "selection_score": 0.054998
+    },
+    "s_learner:hist_gb": {
+      "learner_type": "s_learner",
+      "base_algorithm": "hist_gb",
+      "validation": {
+        "qini_coefficient": 0.1696,
+        "policy_value": {
+          "estimator": "self_normalized_ipw_on_heldout_treated",
+          "treat_none_control_rate": 0.029787,
+          "random_action_value": 0.127672,
+          "best_marginal": {
+            "action": "method_switch_prompt",
+            "value": 0.174641,
+            "n_matched": 418
+          },
+          "uplift_policy": {
+            "value": 0.177458,
+            "n_matched": 417,
+            "gain_vs_random_action": 0.049786,
+            "gain_vs_treat_none": 0.147671
+          },
+          "recommended_action_distribution": {
+            "method_switch_prompt": 1382,
+            "whatsapp_nudge": 183,
+            "sms_nudge": 82,
+            "retry": 37
+          }
+        },
+        "uplift_at_k": [
+          {
+            "k_fraction": 0.1,
+            "n": 215,
+            "n_treated": 184,
+            "n_control": 31,
+            "treated_recovery_rate": 0.23913,
+            "control_recovery_rate": 0.096774,
+            "observed_uplift": 0.142356,
+            "mean_predicted_uplift": 0.17283
+          },
+          {
+            "k_fraction": 0.2,
+            "n": 431,
+            "n_treated": 357,
+            "n_control": 74,
+            "treated_recovery_rate": 0.190476,
+            "control_recovery_rate": 0.040541,
+            "observed_uplift": 0.149936,
+            "mean_predicted_uplift": 0.15118
+          },
+          {
+            "k_fraction": 0.3,
+            "n": 646,
+            "n_treated": 523,
+            "n_control": 123,
+            "treated_recovery_rate": 0.170172,
+            "control_recovery_rate": 0.065041,
+            "observed_uplift": 0.105131,
+            "mean_predicted_uplift": 0.1393
+          },
+          {
+            "k_fraction": 0.5,
+            "n": 1077,
+            "n_treated": 864,
+            "n_control": 213,
+            "treated_recovery_rate": 0.175926,
+            "control_recovery_rate": 0.046948,
+            "observed_uplift": 0.128978,
+            "mean_predicted_uplift": 0.1246
+          }
+        ]
+      },
+      "selection_score": 0.049786
+    },
+    "s_learner:logreg": {
+      "learner_type": "s_learner",
+      "base_algorithm": "logreg",
+      "validation": {
+        "qini_coefficient": 0.1606,
+        "policy_value": {
+          "estimator": "self_normalized_ipw_on_heldout_treated",
+          "treat_none_control_rate": 0.029787,
+          "random_action_value": 0.127672,
+          "best_marginal": {
+            "action": "method_switch_prompt",
+            "value": 0.174641,
+            "n_matched": 418
+          },
+          "uplift_policy": {
+            "value": 0.174641,
+            "n_matched": 418,
+            "gain_vs_random_action": 0.046969,
+            "gain_vs_treat_none": 0.144854
+          },
+          "recommended_action_distribution": {
+            "method_switch_prompt": 1684
+          }
+        },
+        "uplift_at_k": [
+          {
+            "k_fraction": 0.1,
+            "n": 215,
+            "n_treated": 171,
+            "n_control": 44,
+            "treated_recovery_rate": 0.187135,
+            "control_recovery_rate": 0.090909,
+            "observed_uplift": 0.096225,
+            "mean_predicted_uplift": 0.19348
+          },
+          {
+            "k_fraction": 0.2,
+            "n": 431,
+            "n_treated": 352,
+            "n_control": 79,
+            "treated_recovery_rate": 0.204545,
+            "control_recovery_rate": 0.063291,
+            "observed_uplift": 0.141254,
+            "mean_predicted_uplift": 0.17875
+          },
+          {
+            "k_fraction": 0.3,
+            "n": 646,
+            "n_treated": 519,
+            "n_control": 127,
+            "treated_recovery_rate": 0.177264,
+            "control_recovery_rate": 0.047244,
+            "observed_uplift": 0.13002,
+            "mean_predicted_uplift": 0.16863
+          },
+          {
+            "k_fraction": 0.5,
+            "n": 1077,
+            "n_treated": 850,
+            "n_control": 227,
+            "treated_recovery_rate": 0.162353,
+            "control_recovery_rate": 0.052863,
+            "observed_uplift": 0.10949,
+            "mean_predicted_uplift": 0.15298
+          }
+        ]
+      },
+      "selection_score": 0.046969
+    }
+  },
+  "champion": "t_learner:hist_gb",
+  "champion_reason": "selected 't_learner:hist_gb': highest held-out policy-value gain over random action assignment (+0.05500 recovery-rate points); ties broken toward the Qini coefficient. Scores: t_learner:hist_gb=+0.05500, s_learner:hist_gb=+0.04979, s_learner:logreg=+0.04697",
+  "estimator_metadata": {
+    "learner_type": "t_learner",
+    "base_algorithm": "HistGradientBoostingClassifier",
+    "calibration_method": "sigmoid",
+    "calibration_cv": 3,
+    "per_arm_training_rows": {
+      "none": 1782,
+      "retry": 1744,
+      "sms_nudge": 1732,
+      "whatsapp_nudge": 1641,
+      "method_switch_prompt": 1718
+    },
+    "notes": [
+      "one calibrated classifier per arm over BASELINE_FEATURES",
+      "control arm trained on 1782 rows"
+    ]
+  },
+  "test_evaluation": {
+    "n_heldout": 2154,
+    "n_treated": 1722,
+    "n_control": 432,
+    "positives_treated": 188,
+    "positives_control": 15,
+    "qini": {
+      "curve": [
+        {
+          "population_fraction": 0.05,
+          "qini": 10.625
+        },
+        {
+          "population_fraction": 0.1,
+          "qini": 27.3529
+        },
+        {
+          "population_fraction": 0.15,
+          "qini": 42.8621
+        },
+        {
+          "population_fraction": 0.2,
+          "qini": 46.3684
+        },
+        {
+          "population_fraction": 0.25,
+          "qini": 57.6087
+        },
+        {
+          "population_fraction": 0.3,
+          "qini": 66.2381
+        },
+        {
+          "population_fraction": 0.35,
+          "qini": 72.4056
+        },
+        {
+          "population_fraction": 0.4,
+          "qini": 84.6118
+        },
+        {
+          "population_fraction": 0.45,
+          "qini": 97.9091
+        },
+        {
+          "population_fraction": 0.5,
+          "qini": 98.2038
+        },
+        {
+          "population_fraction": 0.55,
+          "qini": 94.8305
+        },
+        {
+          "population_fraction": 0.6,
+          "qini": 100.7004
+        },
+        {
+          "population_fraction": 0.65,
+          "qini": 106.4255
+        },
+        {
+          "population_fraction": 0.7,
+          "qini": 115.7082
+        },
+        {
+          "population_fraction": 0.75,
+          "qini": 120.2006
+        },
+        {
+          "population_fraction": 0.8,
+          "qini": 122.4841
+        },
+        {
+          "population_fraction": 0.85,
+          "qini": 124.0
+        },
+        {
+          "population_fraction": 0.9,
+          "qini": 125.4308
+        },
+        {
+          "population_fraction": 0.95,
+          "qini": 128.6216
+        },
+        {
+          "population_fraction": 1.0,
+          "qini": 128.2083
+        }
+      ],
+      "total_incremental_responders": 128.208,
+      "qini_coefficient": 0.3373,
+      "bootstrap_ci": {
+        "n_effective_samples": 200,
+        "ci_95": [
+          0.1932,
+          0.5451
+        ],
+        "std": 0.1012
+      }
+    },
+    "uplift_at_k": [
+      {
+        "k_fraction": 0.1,
+        "n": 215,
+        "n_treated": 181,
+        "n_control": 34,
+        "treated_recovery_rate": 0.209945,
+        "control_recovery_rate": 0.058824,
+        "observed_uplift": 0.151121,
+        "mean_predicted_uplift": 0.20918
+      },
+      {
+        "k_fraction": 0.2,
+        "n": 431,
+        "n_treated": 355,
+        "n_control": 76,
+        "treated_recovery_rate": 0.183099,
+        "control_recovery_rate": 0.052632,
+        "observed_uplift": 0.130467,
+        "mean_predicted_uplift": 0.19539
+      },
+      {
+        "k_fraction": 0.3,
+        "n": 646,
+        "n_treated": 520,
+        "n_control": 126,
+        "treated_recovery_rate": 0.175,
+        "control_recovery_rate": 0.047619,
+        "observed_uplift": 0.127381,
+        "mean_predicted_uplift": 0.1847
+      },
+      {
+        "k_fraction": 0.5,
+        "n": 1077,
+        "n_treated": 866,
+        "n_control": 211,
+        "treated_recovery_rate": 0.15127,
+        "control_recovery_rate": 0.037915,
+        "observed_uplift": 0.113356,
+        "mean_predicted_uplift": 0.17043
+      }
+    ],
+    "observed_lift_by_action": {
+      "control": {
+        "n": 432,
+        "recovery_rate": 0.034722
+      },
+      "retry": {
+        "n": 437,
+        "recovery_rate": 0.08238,
+        "observed_uplift_vs_control": 0.047658,
+        "uplift_std_error": 0.015829,
+        "uplift_z": 3.010719
+      },
+      "sms_nudge": {
+        "n": 402,
+        "recovery_rate": 0.106965,
+        "observed_uplift_vs_control": 0.072243,
+        "uplift_std_error": 0.017754,
+        "uplift_z": 4.069101
+      },
+      "whatsapp_nudge": {
+        "n": 435,
+        "recovery_rate": 0.112644,
+        "observed_uplift_vs_control": 0.077921,
+        "uplift_std_error": 0.017532,
+        "uplift_z": 4.44456
+      },
+      "method_switch_prompt": {
+        "n": 448,
+        "recovery_rate": 0.133929,
+        "observed_uplift_vs_control": 0.099206,
+        "uplift_std_error": 0.018344,
+        "uplift_z": 5.40817
+      }
+    },
+    "policy_value": {
+      "estimator": "self_normalized_ipw_on_heldout_treated",
+      "treat_none_control_rate": 0.034722,
+      "random_action_value": 0.109175,
+      "best_marginal": {
+        "action": "method_switch_prompt",
+        "value": 0.133929,
+        "n_matched": 448
+      },
+      "uplift_policy": {
+        "value": 0.12528,
+        "n_matched": 447,
+        "gain_vs_random_action": 0.016104,
+        "gain_vs_treat_none": 0.090557
+      },
+      "recommended_action_distribution": {
+        "method_switch_prompt": 1404,
+        "whatsapp_nudge": 248,
+        "sms_nudge": 70
+      }
+    },
+    "uplift_calibration": [
+      {
+        "bin": "[0.0588,0.1068]",
+        "n": 432,
+        "mean_predicted_uplift": 0.09207,
+        "observed_uplift": 0.017054,
+        "n_treated": 347,
+        "n_control": 85
+      },
+      {
+        "bin": "[0.1068,0.1293]",
+        "n": 432,
+        "mean_predicted_uplift": 0.11784,
+        "observed_uplift": 0.063158,
+        "n_treated": 342,
+        "n_control": 90
+      },
+      {
+        "bin": "[0.1293,0.1494]",
+        "n": 430,
+        "mean_predicted_uplift": 0.13981,
+        "observed_uplift": 0.047485,
+        "n_treated": 343,
+        "n_control": 87
+      },
+      {
+        "bin": "[0.1494,0.1706]",
+        "n": 431,
+        "mean_predicted_uplift": 0.15817,
+        "observed_uplift": 0.109287,
+        "n_treated": 337,
+        "n_control": 94
+      },
+      {
+        "bin": "[0.1706,0.2549]",
+        "n": 431,
+        "mean_predicted_uplift": 0.19539,
+        "observed_uplift": 0.130467,
+        "n_treated": 355,
+        "n_control": 76
+      }
+    ],
+    "statistical_reliability": {
+      "reliable": true,
+      "note": "PASS: enough held-out control outcomes for a directional read."
+    }
+  },
+  "config": {
+    "random_state": 42,
+    "split_fractions": [
+      0.6,
+      0.2,
+      0.2
+    ],
+    "candidates": [
+      "t_learner:hist_gb",
+      "s_learner:hist_gb",
+      "s_learner:logreg"
+    ],
+    "champion": "t_learner:hist_gb",
+    "fast_mode": false,
+    "selection_metric": "heldout_policy_value_gain_vs_random_action"
+  },
+  "limitations": [
+    "SYNTHETIC DATA. Results are a benchmark against a known generator, not evidence of a real causal effect.",
+    "Control arm is small: 2214 rows / 58 natural recoveries. mu_0 and every uplift number built on it are high-variance.",
+    "Treatment rows carry a UNIFORMLY RANDOM first action, not the policy's choice, so Qini / uplift@k estimate the value of targeting WHO to treat with a random action -- a lower bound on the value of also choosing WHAT.",
+    "First-decision only: escalation attempts 2-3 are excluded, so the model says nothing about sequential recovery strategy.",
+    "Decision time is the recovery event's creation time for both arms; the generator's reconstructed payment schedule and ~uniform failure-time sampling still apply (see app/ml/README.md).",
+    "No hidden-confounding adjustment beyond the logged decision context; valid here only because assignment is known-randomized."
+  ]
+}

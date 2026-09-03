@@ -1,0 +1,724 @@
+{
+  "model_name": "recovery_response",
+  "model_version": "ml_v1",
+  "created_at": "2026-09-02T09:40:20.943235+00:00",
+  "synthetic_benchmark": true,
+  "synthetic_warning": "Trained on synthetic data from a generator with a known outcome process. Metrics are a SYNTHETIC BENCHMARK, not real-world predictive performance; the model may be recovering the simulator's rules.",
+  "dataset": {
+    "dataset_version": "ds_da52ed61da44",
+    "feature_version": "feat_v1",
+    "n_rows": 12207,
+    "n_recovery_events": 8557,
+    "n_customers": 3965,
+    "n_positive": 1221,
+    "n_negative": 10986,
+    "positive_rate": 0.100025,
+    "as_of_min": "2025-12-06 20:42:23.839240+00:00",
+    "as_of_max": "2026-09-06 18:55:03.757206+00:00",
+    "action_counts": {
+      "method_switch_prompt": 3100,
+      "retry": 3066,
+      "sms_nudge": 3032,
+      "whatsapp_nudge": 3009
+    },
+    "action_positive_counts": {
+      "method_switch_prompt": 402,
+      "retry": 208,
+      "sms_nudge": 288,
+      "whatsapp_nudge": 323
+    }
+  },
+  "action_coverage": {
+    "per_action": {
+      "retry": {
+        "examples": 3066,
+        "recovered": 208,
+        "not_recovered": 2858,
+        "recovery_rate": 0.067841,
+        "distinct_events": 3066,
+        "sufficient": true
+      },
+      "sms_nudge": {
+        "examples": 3032,
+        "recovered": 288,
+        "not_recovered": 2744,
+        "recovery_rate": 0.094987,
+        "distinct_events": 3032,
+        "sufficient": true
+      },
+      "whatsapp_nudge": {
+        "examples": 3009,
+        "recovered": 323,
+        "not_recovered": 2686,
+        "recovery_rate": 0.107345,
+        "distinct_events": 3009,
+        "sufficient": true
+      },
+      "method_switch_prompt": {
+        "examples": 3100,
+        "recovered": 402,
+        "not_recovered": 2698,
+        "recovery_rate": 0.129677,
+        "distinct_events": 3100,
+        "sufficient": true
+      }
+    },
+    "within_event_action_pairs": {
+      "method_switch_prompt+retry": 744,
+      "retry+whatsapp_nudge": 735,
+      "method_switch_prompt+sms_nudge": 712,
+      "sms_nudge+whatsapp_nudge": 707,
+      "retry+sms_nudge": 706,
+      "method_switch_prompt+whatsapp_nudge": 700
+    },
+    "insufficient_actions": [],
+    "notes": [
+      "No fabricated counterfactuals: rows exist only for actions actually executed on an event.",
+      "Control events (no intervention) are excluded from this dataset; they are reserved for future uplift modelling."
+    ]
+  },
+  "data_quality": {
+    "passed": true,
+    "failures": [],
+    "warnings": [
+      "nullable feature 'cust_days_since_last_failure' is 0.40 null (imputed at train & inference)",
+      "175 exact-duplicate feature+label rows (kept -- they are distinct observed interventions)"
+    ],
+    "checks": {
+      "feature_sql_forbidden_tokens_training": [],
+      "feature_sql_forbidden_tokens_inference": [],
+      "missing_columns": [],
+      "label_values": [
+        0,
+        1
+      ],
+      "positive_rate": 0.100025,
+      "null_fraction": {
+        "amount_paise": 0.0,
+        "subscription_amount": 0.0,
+        "priority": 0.0,
+        "hours_since_failure": 0.0,
+        "subscription_tenure_days": 0.0,
+        "attempt_number": 0.0,
+        "already_tried_retry": 0.0,
+        "already_tried_sms_nudge": 0.0,
+        "already_tried_whatsapp_nudge": 0.0,
+        "already_tried_method_switch_prompt": 0.0,
+        "cust_prior_total_payments": 0.0,
+        "cust_prior_failed_payments": 0.0,
+        "cust_prior_successful_payments": 0.0,
+        "cust_prior_recovered_payments": 0.0,
+        "cust_prior_success_ratio": 0.0,
+        "cust_prior_failure_ratio": 0.0,
+        "cust_days_since_last_failure": 0.401081,
+        "cust_failures_last_90d": 0.0,
+        "failure_reason": 0.0,
+        "action": 0.0,
+        "experiment_intervention_type": 0.0
+      },
+      "impossible_values": {},
+      "temporal_violations": 0,
+      "exact_duplicate_rows": 175,
+      "action_counts": {
+        "method_switch_prompt": 3100,
+        "retry": 3066,
+        "sms_nudge": 3032,
+        "whatsapp_nudge": 3009
+      },
+      "categorical_domains": {
+        "failure_reason": [
+          "bank_timeout",
+          "card_expired",
+          "insufficient_funds",
+          "issuer_decline"
+        ],
+        "action": [
+          "method_switch_prompt",
+          "retry",
+          "sms_nudge",
+          "whatsapp_nudge"
+        ],
+        "experiment_intervention_type": [
+          "method_switch_prompt",
+          "retry",
+          "sms_nudge"
+        ]
+      },
+      "split_contamination": {
+        "train_val": 0,
+        "train_test": 0,
+        "val_test": 0
+      }
+    }
+  },
+  "split": {
+    "strategy": "grouped(recovery_event) + chronological(min as_of)",
+    "fractions": [
+      0.6,
+      0.2,
+      0.2
+    ],
+    "train": {
+      "rows": 7304,
+      "events": 5134,
+      "customers": 2793,
+      "positives": 729,
+      "positive_rate": 0.099808,
+      "as_of_min": "2025-12-06 20:42:23.839240+00:00",
+      "as_of_max": "2026-06-11 07:00:59.846900+00:00"
+    },
+    "validation": {
+      "rows": 2428,
+      "events": 1711,
+      "customers": 1401,
+      "positives": 267,
+      "positive_rate": 0.109967,
+      "as_of_min": "2026-06-08 15:44:36.020814+00:00",
+      "as_of_max": "2026-07-26 21:51:34.999858+00:00"
+    },
+    "test": {
+      "rows": 2475,
+      "events": 1712,
+      "customers": 1424,
+      "positives": 225,
+      "positive_rate": 0.090909,
+      "as_of_min": "2026-07-22 22:34:17.051441+00:00",
+      "as_of_max": "2026-09-06 18:55:03.757206+00:00"
+    },
+    "event_overlap": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "customer_overlap": {
+      "train_val": 813,
+      "train_test": 618,
+      "val_test": 546,
+      "note": "customer overlap is expected and does not leak the label; history features are point-in-time per row"
+    }
+  },
+  "model_comparison": {
+    "logreg": {
+      "algorithm": "LogisticRegression",
+      "val_roc_auc": 0.7007124943889551,
+      "val_pr_auc": 0.22719118923820436,
+      "val_log_loss": 0.32171648665015695,
+      "val_brier": 0.09279309508626453,
+      "val_ece": 0.00869
+    },
+    "hist_gb": {
+      "algorithm": "HistGradientBoostingClassifier",
+      "val_roc_auc": 0.6839946133968356,
+      "val_pr_auc": 0.20278531440448277,
+      "val_log_loss": 0.3259550007397379,
+      "val_brier": 0.09395882628517417,
+      "val_ece": 0.011229
+    },
+    "random_forest": {
+      "algorithm": "RandomForestClassifier",
+      "val_roc_auc": 0.68546605036162,
+      "val_pr_auc": 0.1979659147861574,
+      "val_log_loss": 0.32691105729750936,
+      "val_brier": 0.0942252024741466,
+      "val_ece": 0.014
+    }
+  },
+  "selected_model": "logreg",
+  "selected_reason": "best validation PR-AUC=0.2272; among models within 0.02 PR-AUC (['logreg']) selected 'logreg' for lowest validation ECE (0.0087)",
+  "calibration": {
+    "method": "sigmoid",
+    "cv_folds": 5,
+    "isotonic_rejected_reason": "only 729 positives in train (< 1000); isotonic would overfit",
+    "test_uncalibrated": {
+      "expected_calibration_error": 0.361027,
+      "max_calibration_error": 0.536393,
+      "brier": 0.2264209760984707,
+      "mean_predicted": 0.451936,
+      "observed_rate": 0.090909,
+      "reliability_table": [
+        {
+          "bin": "[0.0,0.1)",
+          "n": 62,
+          "mean_predicted": 0.071295,
+          "observed_rate": 0.032258
+        },
+        {
+          "bin": "[0.1,0.2)",
+          "n": 208,
+          "mean_predicted": 0.155065,
+          "observed_rate": 0.009615
+        },
+        {
+          "bin": "[0.2,0.3)",
+          "n": 302,
+          "mean_predicted": 0.250548,
+          "observed_rate": 0.029801
+        },
+        {
+          "bin": "[0.3,0.4)",
+          "n": 432,
+          "mean_predicted": 0.351748,
+          "observed_rate": 0.05787
+        },
+        {
+          "bin": "[0.4,0.5)",
+          "n": 424,
+          "mean_predicted": 0.451995,
+          "observed_rate": 0.058962
+        },
+        {
+          "bin": "[0.5,0.6)",
+          "n": 414,
+          "mean_predicted": 0.550951,
+          "observed_rate": 0.137681
+        },
+        {
+          "bin": "[0.6,0.7)",
+          "n": 401,
+          "mean_predicted": 0.647904,
+          "observed_rate": 0.134663
+        },
+        {
+          "bin": "[0.7,0.8)",
+          "n": 203,
+          "mean_predicted": 0.74329,
+          "observed_rate": 0.206897
+        },
+        {
+          "bin": "[0.8,0.9)",
+          "n": 29,
+          "mean_predicted": 0.821017,
+          "observed_rate": 0.310345
+        }
+      ]
+    },
+    "test_calibrated": {
+      "expected_calibration_error": 0.01372,
+      "max_calibration_error": 0.035605,
+      "brier": 0.07917235816684175,
+      "mean_predicted": 0.104082,
+      "observed_rate": 0.090909,
+      "reliability_table": [
+        {
+          "bin": "[0.0,0.1)",
+          "n": 1390,
+          "mean_predicted": 0.056551,
+          "observed_rate": 0.042446
+        },
+        {
+          "bin": "[0.1,0.2)",
+          "n": 853,
+          "mean_predicted": 0.142939,
+          "observed_rate": 0.134818
+        },
+        {
+          "bin": "[0.2,0.3)",
+          "n": 213,
+          "mean_predicted": 0.238254,
+          "observed_rate": 0.206573
+        },
+        {
+          "bin": "[0.3,0.4)",
+          "n": 19,
+          "mean_predicted": 0.332816,
+          "observed_rate": 0.368421
+        }
+      ]
+    }
+  },
+  "validation_metrics": {
+    "classification": {
+      "n": 2428,
+      "n_positive": 267,
+      "n_negative": 2161,
+      "positive_rate": 0.109967,
+      "threshold": 0.5,
+      "roc_auc": 0.7007124943889551,
+      "pr_auc": 0.22719118923820436,
+      "log_loss": 0.32171648665015695,
+      "brier": 0.09279309508626453,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "confusion_matrix": {
+        "tn": 2161,
+        "fp": 0,
+        "fn": 267,
+        "tp": 0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 0.1,
+          "flagged": 1064,
+          "precision": 0.17105263157894737,
+          "recall": 0.6816479400749064,
+          "f1": 0.2734785875281743
+        },
+        {
+          "threshold": 0.11,
+          "flagged": 949,
+          "precision": 0.1791359325605901,
+          "recall": 0.6367041198501873,
+          "f1": 0.27960526315789475
+        },
+        {
+          "threshold": 0.1943,
+          "flagged": 242,
+          "precision": 0.2644628099173554,
+          "recall": 0.2397003745318352,
+          "f1": 0.25147347740667975
+        },
+        {
+          "threshold": 0.2,
+          "flagged": 210,
+          "precision": 0.2714285714285714,
+          "recall": 0.21348314606741572,
+          "f1": 0.2389937106918239
+        },
+        {
+          "threshold": 0.3,
+          "flagged": 10,
+          "precision": 0.3,
+          "recall": 0.011235955056179775,
+          "f1": 0.021660649819494584
+        }
+      ]
+    },
+    "calibration": {
+      "expected_calibration_error": 0.00869,
+      "max_calibration_error": 0.57242,
+      "brier": 0.09279309508626453,
+      "mean_predicted": 0.102062,
+      "observed_rate": 0.109967,
+      "reliability_table": [
+        {
+          "bin": "[0.0,0.1)",
+          "n": 1364,
+          "mean_predicted": 0.055535,
+          "observed_rate": 0.062317
+        },
+        {
+          "bin": "[0.1,0.2)",
+          "n": 854,
+          "mean_predicted": 0.142898,
+          "observed_rate": 0.14637
+        },
+        {
+          "bin": "[0.2,0.3)",
+          "n": 200,
+          "mean_predicted": 0.23321,
+          "observed_rate": 0.27
+        },
+        {
+          "bin": "[0.3,0.4)",
+          "n": 9,
+          "mean_predicted": 0.328055,
+          "observed_rate": 0.222222
+        },
+        {
+          "bin": "[0.4,0.5)",
+          "n": 1,
+          "mean_predicted": 0.42758,
+          "observed_rate": 1.0
+        }
+      ]
+    },
+    "per_action": {
+      "method_switch_prompt": {
+        "n": 615,
+        "n_positive": 90,
+        "observed_rate": 0.146341,
+        "mean_predicted": 0.128616,
+        "roc_auc": 0.6939470899470899,
+        "pr_auc": 0.2734784017784629,
+        "brier": 0.11821456966366449
+      },
+      "retry": {
+        "n": 624,
+        "n_positive": 42,
+        "observed_rate": 0.067308,
+        "mean_predicted": 0.07601,
+        "roc_auc": 0.6814760268368516,
+        "pr_auc": 0.15152250843583034,
+        "brier": 0.061161938088048005
+      },
+      "sms_nudge": {
+        "n": 609,
+        "n_positive": 67,
+        "observed_rate": 0.110016,
+        "mean_predicted": 0.096461,
+        "roc_auc": 0.6573222448642396,
+        "pr_auc": 0.22802152395498484,
+        "brier": 0.09479366043620886
+      },
+      "whatsapp_nudge": {
+        "n": 580,
+        "n_positive": 68,
+        "observed_rate": 0.117241,
+        "mean_predicted": 0.107816,
+        "roc_auc": 0.7111960018382354,
+        "pr_auc": 0.2381481361643767,
+        "brier": 0.09776773440293703
+      }
+    }
+  },
+  "test_metrics": {
+    "classification": {
+      "n": 2475,
+      "n_positive": 225,
+      "n_negative": 2250,
+      "positive_rate": 0.090909,
+      "threshold": 0.5,
+      "roc_auc": 0.7011466666666666,
+      "pr_auc": 0.18616203781712584,
+      "log_loss": 0.2843502283467402,
+      "brier": 0.07917235816684175,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "confusion_matrix": {
+        "tn": 2250,
+        "fp": 0,
+        "fn": 225,
+        "tp": 0
+      },
+      "threshold_sweep": [
+        {
+          "threshold": 0.091,
+          "flagged": 1225,
+          "precision": 0.14122448979591837,
+          "recall": 0.7688888888888888,
+          "f1": 0.2386206896551724
+        },
+        {
+          "threshold": 0.1,
+          "flagged": 1085,
+          "precision": 0.15299539170506912,
+          "recall": 0.7377777777777778,
+          "f1": 0.2534351145038168
+        },
+        {
+          "threshold": 0.1966,
+          "flagged": 247,
+          "precision": 0.22267206477732793,
+          "recall": 0.24444444444444444,
+          "f1": 0.2330508474576271
+        },
+        {
+          "threshold": 0.2,
+          "flagged": 232,
+          "precision": 0.21982758620689655,
+          "recall": 0.22666666666666666,
+          "f1": 0.22319474835886213
+        },
+        {
+          "threshold": 0.3,
+          "flagged": 19,
+          "precision": 0.3684210526315789,
+          "recall": 0.03111111111111111,
+          "f1": 0.05737704918032787
+        }
+      ]
+    },
+    "calibration": {
+      "expected_calibration_error": 0.01372,
+      "max_calibration_error": 0.035605,
+      "brier": 0.07917235816684175,
+      "mean_predicted": 0.104082,
+      "observed_rate": 0.090909,
+      "reliability_table": [
+        {
+          "bin": "[0.0,0.1)",
+          "n": 1390,
+          "mean_predicted": 0.056551,
+          "observed_rate": 0.042446
+        },
+        {
+          "bin": "[0.1,0.2)",
+          "n": 853,
+          "mean_predicted": 0.142939,
+          "observed_rate": 0.134818
+        },
+        {
+          "bin": "[0.2,0.3)",
+          "n": 213,
+          "mean_predicted": 0.238254,
+          "observed_rate": 0.206573
+        },
+        {
+          "bin": "[0.3,0.4)",
+          "n": 19,
+          "mean_predicted": 0.332816,
+          "observed_rate": 0.368421
+        }
+      ]
+    },
+    "per_action": {
+      "method_switch_prompt": {
+        "n": 644,
+        "n_positive": 72,
+        "observed_rate": 0.111801,
+        "mean_predicted": 0.130082,
+        "roc_auc": 0.691348581973582,
+        "pr_auc": 0.23100960628908293,
+        "brier": 0.0944732383866602
+      },
+      "retry": {
+        "n": 637,
+        "n_positive": 41,
+        "observed_rate": 0.064364,
+        "mean_predicted": 0.074784,
+        "roc_auc": 0.7461532165657226,
+        "pr_auc": 0.18805541996789604,
+        "brier": 0.05724702170151984
+      },
+      "sms_nudge": {
+        "n": 580,
+        "n_positive": 53,
+        "observed_rate": 0.091379,
+        "mean_predicted": 0.09802,
+        "roc_auc": 0.6362822670151445,
+        "pr_auc": 0.14521810781276806,
+        "brier": 0.08206534423435764
+      },
+      "whatsapp_nudge": {
+        "n": 614,
+        "n_positive": 59,
+        "observed_rate": 0.096091,
+        "mean_predicted": 0.112935,
+        "roc_auc": 0.7129332722553061,
+        "pr_auc": 0.18208182199096062,
+        "brier": 0.08313773365167516
+      }
+    }
+  },
+  "interpretability": {
+    "permutation_importance_top10": [
+      {
+        "feature": "failure_reason",
+        "importance_mean": 0.060341,
+        "importance_std": 0.0048
+      },
+      {
+        "feature": "attempt_number",
+        "importance_mean": 0.021344,
+        "importance_std": 0.010081
+      },
+      {
+        "feature": "cust_prior_successful_payments",
+        "importance_mean": 0.019968,
+        "importance_std": 0.007782
+      },
+      {
+        "feature": "action",
+        "importance_mean": 0.01892,
+        "importance_std": 0.007148
+      },
+      {
+        "feature": "already_tried_sms_nudge",
+        "importance_mean": 0.007115,
+        "importance_std": 0.003745
+      },
+      {
+        "feature": "already_tried_retry",
+        "importance_mean": 0.006694,
+        "importance_std": 0.005772
+      },
+      {
+        "feature": "hours_since_failure",
+        "importance_mean": 0.006504,
+        "importance_std": 0.008614
+      },
+      {
+        "feature": "already_tried_method_switch_prompt",
+        "importance_mean": 0.005267,
+        "importance_std": 0.003664
+      },
+      {
+        "feature": "already_tried_whatsapp_nudge",
+        "importance_mean": 0.004058,
+        "importance_std": 0.006363
+      },
+      {
+        "feature": "cust_prior_failed_payments",
+        "importance_mean": 0.002733,
+        "importance_std": 0.003378
+      }
+    ],
+    "logreg_coefficients_top15": [
+      {
+        "feature": "cat__failure_reason_card_expired",
+        "coefficient": -0.777722
+      },
+      {
+        "feature": "cat__failure_reason_bank_timeout",
+        "coefficient": 0.701046
+      },
+      {
+        "feature": "cat__action_retry",
+        "coefficient": -0.465836
+      },
+      {
+        "feature": "num__attempt_number",
+        "coefficient": -0.352784
+      },
+      {
+        "feature": "cat__failure_reason_issuer_decline",
+        "coefficient": -0.331641
+      },
+      {
+        "feature": "cat__action_method_switch_prompt",
+        "coefficient": 0.321047
+      },
+      {
+        "feature": "cat__failure_reason_insufficient_funds",
+        "coefficient": 0.255359
+      },
+      {
+        "feature": "num__hours_since_failure",
+        "coefficient": 0.247718
+      },
+      {
+        "feature": "num__already_tried_whatsapp_nudge",
+        "coefficient": -0.20202
+      },
+      {
+        "feature": "num__already_tried_retry",
+        "coefficient": -0.200707
+      },
+      {
+        "feature": "num__already_tried_method_switch_prompt",
+        "coefficient": -0.161177
+      },
+      {
+        "feature": "num__already_tried_sms_nudge",
+        "coefficient": -0.15683
+      },
+      {
+        "feature": "num__cust_prior_successful_payments",
+        "coefficient": 0.151694
+      },
+      {
+        "feature": "num__missingindicator_cust_days_since_last_failure",
+        "coefficient": 0.110603
+      },
+      {
+        "feature": "cat__experiment_intervention_type_sms_nudge",
+        "coefficient": -0.098576
+      }
+    ]
+  },
+  "config": {
+    "random_state": 42,
+    "split_fractions": [
+      0.6,
+      0.2,
+      0.2
+    ],
+    "calibration_method": "sigmoid",
+    "calibration_cv_folds": 5,
+    "decision_threshold": 0.5,
+    "selected_model": "logreg",
+    "fast_mode": false
+  }
+}
