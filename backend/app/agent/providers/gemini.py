@@ -68,6 +68,72 @@ class GeminiProvider:
         latency_ms = int((time.monotonic() - started) * 1000)
         return self._parse_turn(data, latency_ms)
 
+    def generate_json(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        response_schema: dict[str, Any] | None = None,
+        max_output_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        """ONE bounded, non-tool-calling request that returns the model's single
+        structured JSON object.
+
+        This is deliberately *not* :meth:`generate`: no ``tools``, no
+        ``functionCallingConfig``, no multi-turn loop. It reuses this provider's
+        config, endpoint, auth and typed error hierarchy, and makes exactly one
+        HTTP attempt (:meth:`_post_once` -- no retry), so a caller that must fail
+        safe just catches
+        :class:`~app.agent.providers.base.ProviderError`. Used for a single small
+        judgment (see the recovery scheduler's AI cycle judgment), never for the
+        agent loop.
+        """
+        body: dict[str, Any] = {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": {
+                "temperature": self.config.temperature,
+                "maxOutputTokens": (
+                    max_output_tokens or self.config.max_output_tokens
+                ),
+                "candidateCount": 1,
+                "responseMimeType": "application/json",
+            },
+        }
+        if response_schema is not None:
+            body["generationConfig"]["responseSchema"] = response_schema
+        data = self._post_once(json.dumps(body).encode("utf-8"))
+        return self._parse_json_object(data)
+
+    @staticmethod
+    def _parse_json_object(data: dict[str, Any]) -> dict[str, Any]:
+        candidates = data.get("candidates") or []
+        if not candidates:
+            block = (data.get("promptFeedback") or {}).get("blockReason")
+            raise MalformedResponseError(
+                "Gemini returned no candidates"
+                + (f" (blocked: {block})" if block else "")
+            )
+        parts = ((candidates[0] or {}).get("content") or {}).get("parts") or []
+        text = "".join(
+            str(p["text"]) for p in parts if isinstance(p, dict) and "text" in p
+        ).strip()
+        if not text:
+            raise MalformedResponseError(
+                "Gemini structured response contained no text"
+            )
+        try:
+            obj = json.loads(text)
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise MalformedResponseError(
+                f"Gemini structured response was not valid JSON: {exc}"
+            ) from None
+        if not isinstance(obj, dict):
+            raise MalformedResponseError(
+                "Gemini structured response was not a JSON object"
+            )
+        return obj
+
     # -- request construction --------------------------------------
     def _build_body(
         self,

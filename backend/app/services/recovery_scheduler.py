@@ -28,9 +28,23 @@ backlog on a schedule.
 Cycle history (timestamp, events considered, events triggered, and every skip
 with its reason) is kept in a bounded in-memory ring and exposed verbatim by
 ``GET /api/v1/scheduler/status``.
+
+**AI cycle judgment** (``SCHEDULER_AI_JUDGMENT_ENABLED``, default off): when on,
+each cycle makes exactly ONE bounded, non-tool-calling Gemini request
+(:meth:`GeminiProvider.generate_json`) *immediately before* the allocator,
+handing it a compact summary of recent cycle outcomes and getting back one of
+``proceed_full_capacity`` / ``proceed_reduced_capacity`` / ``skip_this_cycle``
+plus a short reason. It can only ever make this cycle **more** cautious: a
+suggested capacity is clamped to ``SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE`` and can
+never raise it; a skip means the allocator is not called at all. Any failure,
+timeout, rate-limit or malformed response fails safe to
+``proceed_full_capacity`` at the configured cap -- exactly the pre-feature
+behaviour. The decision, its reason and whether it was applied are recorded on
+the cycle's history record.
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from collections import deque
@@ -55,6 +69,55 @@ TRIGGER_RUN_ONCE = "run_once"
 
 ProviderFactory = Callable[[], LLMProvider]
 
+# -- AI cycle judgment -------------------------------------------------------
+JUDGE_PROCEED_FULL = "proceed_full_capacity"
+JUDGE_PROCEED_REDUCED = "proceed_reduced_capacity"
+JUDGE_SKIP = "skip_this_cycle"
+_JUDGE_DECISIONS = frozenset(
+    {JUDGE_PROCEED_FULL, JUDGE_PROCEED_REDUCED, JUDGE_SKIP}
+)
+
+# judgment "source" values
+JUDGE_SOURCE_DISABLED = "disabled"
+JUDGE_SOURCE_GEMINI = "gemini"
+JUDGE_SOURCE_FAIL_SAFE = "fail_safe_default"
+
+_JUDGMENT_CYCLES_SUMMARIZED = 5
+
+_JUDGMENT_SYSTEM_PROMPT = (
+    "You are a cautious pre-flight gate for an automated payment-recovery "
+    "scheduler. Once per cycle the scheduler would trigger up to a configured "
+    "number of autonomous recovery-agent runs on the highest expected-value "
+    "open recovery events. Given a compact summary of how recent cycles went, "
+    "decide whether THIS cycle should run as configured.\n\n"
+    "You can only make the scheduler MORE cautious. You cannot raise the "
+    "capacity above the configured maximum -- any number you suggest is "
+    "clamped to it. Recommend reducing or skipping ONLY when the recent "
+    "history shows a real problem, for example: repeated provider "
+    "quota/rate-limit failures (the runs would just fail again), repeated "
+    "run errors, or every recent run failing safe without progress. When "
+    "recent history looks healthy, or there is too little history to judge, "
+    "choose proceed_full_capacity.\n\n"
+    "Respond with ONLY a JSON object of this exact shape:\n"
+    '{"decision": "proceed_full_capacity" | "proceed_reduced_capacity" | '
+    '"skip_this_cycle", "suggested_capacity": <integer, only for '
+    'proceed_reduced_capacity>, "reason": "<one short plain-language '
+    'sentence>"}'
+)
+
+_JUDGMENT_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "decision": {
+            "type": "string",
+            "enum": [JUDGE_PROCEED_FULL, JUDGE_PROCEED_REDUCED, JUDGE_SKIP],
+        },
+        "suggested_capacity": {"type": "integer"},
+        "reason": {"type": "string"},
+    },
+    "required": ["decision", "reason"],
+}
+
 
 def _utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -73,6 +136,7 @@ class SchedulerConfig:
     dry_run: bool
     policy: str
     history_size: int
+    ai_judgment_enabled: bool = False
 
     @classmethod
     def from_settings(cls) -> "SchedulerConfig":
@@ -86,6 +150,7 @@ class SchedulerConfig:
             dry_run=bool(settings.SCHEDULER_DRY_RUN),
             policy=str(settings.SCHEDULER_POLICY or "rules"),
             history_size=max(1, int(settings.SCHEDULER_CYCLE_HISTORY_SIZE)),
+            ai_judgment_enabled=bool(settings.SCHEDULER_AI_JUDGMENT_ENABLED),
         )
 
     def as_public_dict(self) -> dict:
@@ -95,6 +160,7 @@ class SchedulerConfig:
             "dry_run": self.dry_run,
             "policy": self.policy,
             "cycle_history_size": self.history_size,
+            "ai_judgment_enabled": self.ai_judgment_enabled,
         }
 
 
@@ -125,6 +191,26 @@ class SkippedEvent:
 
 
 @dataclass
+class CycleJudgment:
+    """The AI cycle-judgment decision for one cycle.
+
+    ``effective_capacity`` is what this cycle actually used; it is ALWAYS
+    ``<= configured_cap`` -- the judgment can only ever reduce, never raise it.
+    """
+
+    enabled: bool
+    decision: str            # proceed_full_capacity | proceed_reduced_capacity
+    #                          | skip_this_cycle | (JUDGE_SOURCE_DISABLED)
+    source: str              # disabled | gemini | fail_safe_default
+    configured_cap: int
+    suggested_capacity: int | None
+    effective_capacity: int
+    applied: bool            # did it change this cycle vs. proceed_full_capacity?
+    reason: str
+    error: str | None = None
+
+
+@dataclass
 class CycleRecord:
     cycle_id: int
     trigger: str                       # timer | run_once
@@ -134,6 +220,8 @@ class CycleRecord:
     dry_run: bool
     policy: str
     hard_cap: int                      # SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE this cycle
+    effective_cap: int                 # capacity actually used (<= hard_cap always)
+    ai_judgment: dict | None           # CycleJudgment as a dict, or None when off
     allocation_computable: bool
     allocation_reason: str | None
     events_considered: int             # open, non-control, guardrail-actionable
@@ -164,12 +252,17 @@ class RecoveryScheduler:
         config: SchedulerConfig | None = None,
         session_factory: Callable[[], Session] = SessionLocal,
         provider_factory: ProviderFactory | None = None,
+        judgment_provider_factory: Callable[[], object] | None = None,
     ) -> None:
         self._config = config or SchedulerConfig.from_settings()
         self._session_factory = session_factory
         # Injected only by tests, to supply a fake LLM provider. When None, the
         # runner builds its normal GeminiProvider (and fails safe without a key).
         self._provider_factory = provider_factory
+        # Injected only by tests. Returns an object with a ``generate_json``
+        # method (the AI cycle-judgment call). When None, a real GeminiProvider
+        # is built lazily and any construction/call failure fails safe.
+        self._judgment_provider_factory = judgment_provider_factory
 
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
@@ -271,6 +364,8 @@ class RecoveryScheduler:
             dry_run=self._config.dry_run,
             policy=self._config.policy,
             hard_cap=cap,
+            effective_cap=cap,
+            ai_judgment=None,
             allocation_computable=False,
             allocation_reason=None,
             events_considered=0,
@@ -301,10 +396,29 @@ class RecoveryScheduler:
         return record
 
     def _execute_cycle(
-        self, session: Session, record: CycleRecord, cap: int
+        self, session: Session, record: CycleRecord, configured_cap: int
     ) -> None:
+        # ---- AI cycle judgment -----------------------------------------
+        # ONE bounded Gemini call, immediately before the allocator. It can
+        # only reduce this cycle's capacity or skip the cycle -- never raise it
+        # above configured_cap. Any failure fails safe to configured_cap.
+        judgment = self._judge_cycle(configured_cap)
+        record.ai_judgment = asdict(judgment)
+        effective_cap = judgment.effective_capacity
+        record.effective_cap = effective_cap
+
+        if judgment.decision == JUDGE_SKIP:
+            # The allocator is NOT called this cycle.
+            record.act_set_size = 0
+            record.allocation_reason = (
+                f"cycle skipped before allocation by AI judgment: "
+                f"{judgment.reason}"
+            )
+            return
+
+        # ---- allocation ----------------------------------------------
         allocator = PortfolioAllocator(session, policy_name=self._config.policy)
-        allocation = allocator.allocate(capacity=max(1, cap))
+        allocation = allocator.allocate(capacity=max(1, effective_cap))
 
         record.allocation_computable = allocation.computable
         record.allocation_reason = allocation.reason
@@ -338,35 +452,40 @@ class RecoveryScheduler:
         )
         record.hard_cap_enforced = record.eligible_beyond_cap > 0
 
-        if cap <= 0:
-            record.act_set_size = 0
-            record.errors.append(
-                "SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE is 0; nothing is triggered"
-            )
+        if effective_cap <= 0:
+            record.act_set_size = len(allocation.act)
+            if configured_cap <= 0:
+                record.errors.append(
+                    "SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE is 0; nothing is triggered"
+                )
             for a in allocation.act:
                 record.skipped.append(
                     SkippedEvent(
                         recovery_event_id=a.recovery_event_id,
                         rank=a.rank,
-                        reason="hard cap: SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE=0",
+                        reason=self._beyond_cap_reason(
+                            0, configured_cap, judgment, a.rank, len(allocation.act)
+                        ),
                     )
                 )
             return
 
         # Defence in depth: the allocator already capped its "act" set to
-        # `capacity`, but slice again so the hard cap is enforced *here* too,
-        # independent of the allocator.
+        # `capacity`, but slice again so the effective cap is enforced *here*
+        # too, independent of the allocator. `effective_cap` is itself already
+        # <= configured_cap (the AI judgment can only reduce), so this can never
+        # exceed SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE.
         act = list(allocation.act)
         record.act_set_size = len(act)
-        to_run = act[:cap]
-        for extra in act[cap:]:
+        to_run = act[:effective_cap]
+        for extra in act[effective_cap:]:
             record.skipped.append(
                 SkippedEvent(
                     recovery_event_id=extra.recovery_event_id,
                     rank=extra.rank,
-                    reason=(
-                        f"hard cap: SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE={cap} "
-                        "already consumed by higher-ranked events this cycle"
+                    reason=self._beyond_cap_reason(
+                        effective_cap, configured_cap, judgment,
+                        extra.rank, len(act),
                     ),
                 )
             )
@@ -430,6 +549,219 @@ class RecoveryScheduler:
             decision=result.decision,
             stop_reason=result.stop_reason,
             chosen_action=result.chosen_action,
+        )
+
+    @staticmethod
+    def _beyond_cap_reason(
+        effective_cap: int,
+        configured_cap: int,
+        judgment: "CycleJudgment",
+        rank: int | None,
+        ranked_total: int,
+    ) -> str:
+        pos = f"ranked #{rank} of {ranked_total} by expected value" if rank else (
+            "this event"
+        )
+        if effective_cap < configured_cap and judgment.source == JUDGE_SOURCE_GEMINI:
+            return (
+                f"{pos}; capacity for this cycle was reduced to {effective_cap} "
+                f"by AI judgment (configured cap {configured_cap}: "
+                f"{judgment.reason}) -- beyond the reduced limit"
+            )
+        return (
+            f"{pos}, beyond the capacity limit of {effective_cap} "
+            f"(SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE={configured_cap}) which is "
+            "fully consumed by the higher-ranked events this cycle"
+        )
+
+    # -- AI cycle judgment ----------------------------------------------
+    def _judge_cycle(self, configured_cap: int) -> CycleJudgment:
+        """One bounded judgment for this cycle. Never raises: any failure or
+        malformed output returns the fail-safe default (proceed at the full
+        configured capacity, i.e. pre-feature behaviour)."""
+        enabled = self._config.ai_judgment_enabled
+
+        if not enabled or configured_cap <= 0:
+            return CycleJudgment(
+                enabled=enabled,
+                decision=JUDGE_PROCEED_FULL,
+                source=JUDGE_SOURCE_DISABLED,
+                configured_cap=configured_cap,
+                suggested_capacity=None,
+                effective_capacity=configured_cap,
+                applied=False,
+                reason=(
+                    "AI cycle judgment is disabled"
+                    if not enabled
+                    else "capacity is 0; nothing to judge"
+                ),
+            )
+
+        try:
+            provider = self._judgment_provider()
+            summary = self._build_judgment_summary(configured_cap)
+            raw = provider.generate_json(
+                system_prompt=_JUDGMENT_SYSTEM_PROMPT,
+                user_prompt=(
+                    "Recent scheduler cycle history (most recent first):\n"
+                    + json.dumps(summary, indent=2, default=str)
+                    + "\n\nDecide whether this cycle should proceed as "
+                    "configured. Respond with only the JSON object."
+                ),
+                response_schema=_JUDGMENT_RESPONSE_SCHEMA,
+            )
+            return self._apply_judgment(raw, configured_cap)
+        except Exception as exc:  # noqa: BLE001 - advisory call; must fail safe
+            logger.warning(
+                "AI cycle judgment failed (%s); proceeding at full configured "
+                "capacity %d",
+                exc,
+                configured_cap,
+            )
+            return CycleJudgment(
+                enabled=True,
+                decision=JUDGE_PROCEED_FULL,
+                source=JUDGE_SOURCE_FAIL_SAFE,
+                configured_cap=configured_cap,
+                suggested_capacity=None,
+                effective_capacity=configured_cap,
+                applied=False,
+                reason=(
+                    "AI judgment call failed; defaulted to the full configured "
+                    "capacity (unchanged from pre-feature behaviour)"
+                ),
+                error=f"{type(exc).__name__}: {exc}",
+            )
+
+    def _judgment_provider(self):
+        if self._judgment_provider_factory is not None:
+            return self._judgment_provider_factory()
+        from app.agent.providers.gemini import GeminiProvider
+
+        return GeminiProvider()
+
+    def _build_judgment_summary(self, configured_cap: int) -> dict:
+        with self._lock:
+            recent = list(self._history)[-_JUDGMENT_CYCLES_SUMMARIZED:]
+        recent = list(reversed(recent))  # most recent first
+
+        cycles: list[dict] = []
+        totals = {"completed": 0, "escalated": 0, "failed_safe": 0, "error": 0}
+        total_runs = 0
+        consecutive_quota_failures = 0
+        consecutive_quota_still_counting = True
+        consecutive_ai_skips = 0
+        consecutive_ai_skips_counting = True
+
+        for rec in recent:
+            breakdown = {"completed": 0, "escalated": 0, "failed_safe": 0, "error": 0}
+            quota_fails = 0
+            for t in rec.triggered:
+                status = t.run_status if t.run_status in breakdown else "error"
+                breakdown[status] += 1
+                totals[status] = totals.get(status, 0) + 1
+                total_runs += 1
+                if t.stop_reason == "quota_or_api_failure":
+                    quota_fails += 1
+            ai = rec.ai_judgment or {}
+            ai_skipped = ai.get("decision") == JUDGE_SKIP
+            cycles.append(
+                {
+                    "cycle_id": rec.cycle_id,
+                    "trigger": rec.trigger,
+                    "events_considered": rec.events_considered,
+                    "events_triggered": rec.events_triggered,
+                    "run_status_breakdown": breakdown,
+                    "quota_or_api_failures": quota_fails,
+                    "cycle_errors": len(rec.errors),
+                    "ai_judgment_decision": ai.get("decision"),
+                }
+            )
+            # consecutive counters (over the most-recent-first ordering)
+            if consecutive_ai_skips_counting and ai_skipped:
+                consecutive_ai_skips += 1
+            else:
+                consecutive_ai_skips_counting = False
+            if consecutive_quota_still_counting:
+                if rec.triggered and quota_fails == len(rec.triggered):
+                    consecutive_quota_failures += 1
+                elif rec.triggered:
+                    consecutive_quota_still_counting = False
+                # a cycle that triggered nothing neither breaks nor extends
+
+        return {
+            "configured_max_runs_per_cycle": configured_cap,
+            "cycles_summarized": len(cycles),
+            "recent_cycles": cycles,
+            "totals_across_summarized_cycles": {
+                "runs_triggered": total_runs,
+                **totals,
+            },
+            "consecutive_recent_cycles_all_runs_quota_failed": (
+                consecutive_quota_failures
+            ),
+            "consecutive_recent_cycles_ai_skipped": consecutive_ai_skips,
+        }
+
+    @staticmethod
+    def _apply_judgment(raw: dict, configured_cap: int) -> CycleJudgment:
+        """Turn one raw Gemini JSON object into a clamped, safe CycleJudgment.
+
+        Anything unexpected -- missing/unknown decision, non-integer suggested
+        capacity for a reduce decision -- raises, and the caller converts that
+        into the fail-safe default. A suggested capacity is ALWAYS clamped to
+        ``configured_cap``; it can never raise the cap.
+        """
+        decision = str(raw.get("decision", "")).strip()
+        reason = str(raw.get("reason", "")).strip()[:480] or "(no reason given)"
+        if decision not in _JUDGE_DECISIONS:
+            raise ValueError(f"unknown judgment decision {decision!r}")
+
+        if decision == JUDGE_SKIP:
+            return CycleJudgment(
+                enabled=True,
+                decision=JUDGE_SKIP,
+                source=JUDGE_SOURCE_GEMINI,
+                configured_cap=configured_cap,
+                suggested_capacity=0,
+                effective_capacity=0,
+                applied=True,
+                reason=reason,
+            )
+
+        if decision == JUDGE_PROCEED_FULL:
+            return CycleJudgment(
+                enabled=True,
+                decision=JUDGE_PROCEED_FULL,
+                source=JUDGE_SOURCE_GEMINI,
+                configured_cap=configured_cap,
+                suggested_capacity=configured_cap,
+                effective_capacity=configured_cap,
+                applied=False,
+                reason=reason,
+            )
+
+        # proceed_reduced_capacity
+        suggested_raw = raw.get("suggested_capacity")
+        try:
+            suggested = int(suggested_raw)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"proceed_reduced_capacity without a valid integer "
+                f"suggested_capacity (got {suggested_raw!r})"
+            )
+        # THE clamp: never above the configured cap, never below 1 (a reduce to
+        # zero would be skip_this_cycle). Structurally cannot expand authority.
+        effective = min(max(suggested, 1), configured_cap)
+        return CycleJudgment(
+            enabled=True,
+            decision=JUDGE_PROCEED_REDUCED,
+            source=JUDGE_SOURCE_GEMINI,
+            configured_cap=configured_cap,
+            suggested_capacity=suggested,
+            effective_capacity=effective,
+            applied=effective < configured_cap,
+            reason=reason,
         )
 
     # -- status -----------------------------------------------------

@@ -9,6 +9,22 @@ class SchedulerConfigView(BaseModel):
     dry_run: bool
     policy: str
     cycle_history_size: int
+    ai_judgment_enabled: bool = False
+
+
+class CycleJudgmentView(BaseModel):
+    """The AI cycle-judgment decision for one cycle. ``effective_capacity`` is
+    always ``<= configured_cap`` -- the judgment can only ever reduce it."""
+
+    enabled: bool
+    decision: str
+    source: str  # disabled | gemini | fail_safe_default
+    configured_cap: int
+    suggested_capacity: int | None
+    effective_capacity: int
+    applied: bool
+    reason: str
+    error: str | None = None
 
 
 class TriggeredRunView(BaseModel):
@@ -38,6 +54,8 @@ class CycleRecordView(BaseModel):
     dry_run: bool
     policy: str
     hard_cap: int
+    effective_cap: int
+    ai_judgment: CycleJudgmentView | None = None
     allocation_computable: bool
     allocation_reason: str | None
     events_considered: int

@@ -77,6 +77,15 @@ class Settings(BaseSettings):
     SCHEDULER_POLICY: str = "rules"
     # How many recent cycle records GET /api/v1/scheduler/status keeps.
     SCHEDULER_CYCLE_HISTORY_SIZE: int = 20
+    # AI cycle judgment (app/services/recovery_scheduler.py): one bounded,
+    # non-tool-calling Gemini call per cycle, immediately before the allocator,
+    # that may only make this cycle MORE cautious -- proceed at full configured
+    # capacity, proceed at reduced capacity (clamped to
+    # SCHEDULER_MAX_AUTO_RUNS_PER_CYCLE), or skip this cycle. OFF by default;
+    # when false the Gemini call is skipped entirely and the cycle runs exactly
+    # as it did before this feature. Any failure/timeout/malformed response
+    # fails safe to proceed-at-full-configured-capacity.
+    SCHEDULER_AI_JUDGMENT_ENABLED: bool = False
 
     # --- Frontend / browser access (app/main.py CORS) -----------------
     # Comma-separated list of exact browser origins allowed to call this API.
