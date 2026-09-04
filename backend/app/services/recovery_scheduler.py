@@ -636,9 +636,10 @@ class RecoveryScheduler:
     def _judgment_provider(self):
         if self._judgment_provider_factory is not None:
             return self._judgment_provider_factory()
-        from app.agent.providers.gemini import GeminiProvider
+        from app.agent.providers import make_provider
 
-        return GeminiProvider()
+        # Honours LLM_PROVIDER, same as the agent loop.
+        return make_provider()
 
     def _build_judgment_summary(self, configured_cap: int) -> dict:
         with self._lock:

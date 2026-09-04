@@ -199,6 +199,14 @@ class GeminiProvider:
                 "temperature": self.config.temperature,
                 "maxOutputTokens": self.config.max_output_tokens,
                 "candidateCount": 1,
+                # Only sent when explicitly configured (>= 0). 0 disables the
+                # model's "thinking" pass, which is the largest single source of
+                # per-call latency for the Flash models.
+                **(
+                    {"thinkingConfig": {"thinkingBudget": self.config.thinking_budget}}
+                    if getattr(self.config, "thinking_budget", -1) >= 0
+                    else {}
+                ),
             },
         }
 

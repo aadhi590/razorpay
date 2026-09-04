@@ -367,7 +367,7 @@ export interface ActionLiftTrend {
 }
 export interface AgentRunResult {
   recovery_event_id: number;
-  agent: "gemini";
+  agent: string;
   model: string;
   dry_run: boolean;
   status: "completed" | "escalated" | "failed_safe";

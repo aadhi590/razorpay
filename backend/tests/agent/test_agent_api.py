@@ -42,8 +42,14 @@ def _call(method: str, path: str):
 
 @pytest.fixture
 def mock_gemini(monkeypatch):
+    # The runner builds its live provider via make_provider(); patch that so no
+    # network backend (Gemini or Groq) is ever contacted, and pin the provider
+    # label to gemini regardless of the ambient .env.
+    from app.agent import config as agent_config
+
+    monkeypatch.setattr(agent_config.settings, "LLM_PROVIDER", "gemini", raising=False)
     monkeypatch.setattr(
-        "app.agent.runner.GeminiProvider", lambda config=None: ReactiveProvider()
+        "app.agent.runner.make_provider", lambda config=None: ReactiveProvider()
     )
 
 
@@ -73,7 +79,9 @@ def test_agent_endpoint_404_for_missing_event(mock_gemini):
 def test_agent_endpoint_fails_safe_without_api_key(monkeypatch, fresh_event):
     from app.agent import config as agent_config
 
+    monkeypatch.setattr(agent_config.settings, "LLM_PROVIDER", "gemini", raising=False)
     monkeypatch.setattr(agent_config.settings, "GEMINI_API_KEY", None, raising=False)
+    monkeypatch.setattr(agent_config.settings, "GROQ_API_KEY", None, raising=False)
     sc, body = _call(
         "POST", f"/api/v1/agent/recovery-events/{fresh_event}/run?dry_run=true"
     )

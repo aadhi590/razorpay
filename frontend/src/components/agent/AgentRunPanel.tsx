@@ -9,6 +9,7 @@ import {
   RotateCw,
   Sparkles,
   TriangleAlert,
+  Zap,
 } from "lucide-react";
 import type { AgentRunResult, ToolTraceEntry } from "@/lib/types";
 import type { EventAgentRun } from "@/lib/queries";
@@ -179,10 +180,10 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
       : null;
 
   const isScripted = summary?.model?.startsWith("demo-") ?? false;
-  const runLive = () => {
+  const run = (dryRun: boolean) => {
     setLiveResult(null);
     runMut.mutate(
-      { id: recoveryEventId, dryRun: true },
+      { id: recoveryEventId, dryRun },
       {
         onSuccess: (data) => {
           setLiveResult(data);
@@ -190,9 +191,14 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
           if (data.status === "failed_safe") {
             toast.push(
               data.stop_reason === "quota_or_api_failure"
-                ? "Gemini is rate-limited right now — the agent degraded safely. Your data is untouched."
+                ? "The LLM provider is rate-limited right now — the agent degraded safely. Your data is untouched."
                 : "The agent terminated safely. Nothing was changed.",
               "info",
+            );
+          } else if (!dryRun && data.chosen_action) {
+            toast.push(
+              `Live run complete — ${actionLabel(data.chosen_action)} executed. Check the Razorpay card below for the real Payment Link.`,
+              "success",
             );
           } else {
             toast.push("Live agent run complete.", "success");
@@ -206,6 +212,19 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
         },
       },
     );
+  };
+  const runLive = () => run(true);
+  const runLiveExecute = () => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "This runs the agent live and, if it decides to act, creates a REAL " +
+          "Razorpay Test Mode Payment Link. Continue?",
+      )
+    ) {
+      return;
+    }
+    run(false);
   };
 
   return (
@@ -298,13 +317,20 @@ export function AgentRunPanel({ recoveryEventId, persisted }: Props) {
         <div className="flex flex-wrap items-center gap-2 border-t border-line/[.07] pt-4">
           <Button variant="primary" size="sm" onClick={runLive} loading={runMut.isPending}>
             {liveResult || persisted ? <RotateCw size={13} /> : <Play size={13} />}
-            {liveResult || persisted ? "Run live again" : "Run recovery agent"}
+            {liveResult || persisted ? "Run again" : "Run recovery agent"}
           </Button>
-          <span className="text-2xs text-ink-faint">
-            Dry run · calls Gemini · subject to free-tier rate limits · no external
-            action is executed
-          </span>
+          <Button variant="danger" size="sm" onClick={runLiveExecute} loading={runMut.isPending}>
+            <Zap size={13} />
+            Run live + create Payment Link
+          </Button>
         </div>
+        <p className="text-2xs text-ink-faint">
+          <span className="font-medium text-ink-muted">Run recovery agent</span> — dry
+          run, real LLM reasoning, no external action.{" "}
+          <span className="font-medium text-danger">Run live + create Payment Link</span> —
+          same reasoning, but if the agent chooses an action it really calls Razorpay
+          and creates a Test Mode Payment Link.
+        </p>
       </CardBody>
     </Card>
   );

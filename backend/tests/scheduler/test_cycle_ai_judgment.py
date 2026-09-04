@@ -373,7 +373,7 @@ def singleton_with_judge(monkeypatch):
     from app.services import recovery_scheduler as mod
 
     monkeypatch.setattr(
-        runner, "GeminiProvider", lambda config=None: ReactiveProvider()
+        runner, "make_provider", lambda config=None: ReactiveProvider()
     )
     monkeypatch.setattr(mod.scheduler, "_history", deque(maxlen=20))
     monkeypatch.setattr(mod.scheduler, "_cycle_seq", 0)

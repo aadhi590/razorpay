@@ -26,6 +26,29 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-flash-latest"
     GEMINI_MAX_TURNS: int = 4
     GEMINI_TIMEOUT_SECONDS: float = 20.0
+    # Per-request "thinking" token budget for the agent's Gemini calls. -1 (the
+    # default) means the field is not sent at all, so behaviour is byte-for-byte
+    # unchanged. Set to 0 to DISABLE thinking (much lower per-call latency, at
+    # some cost to reasoning depth); a positive value caps the thinking tokens.
+    GEMINI_THINKING_BUDGET: int = -1
+
+    # Which LLM backend the recovery agent loop + scheduler judgment use.
+    #   "gemini" (default) -> GeminiProvider, GEMINI_* settings above
+    #   "groq"             -> GroqProvider (OpenAI-compatible), GROQ_* below
+    # This is the one-line fallback switch: flip to "gemini" to revert entirely.
+    LLM_PROVIDER: str = "gemini"
+    # Groq (https://console.groq.com) -- OpenAI-compatible, generous free tier,
+    # no billing required. Read from environment / .env only; never logged.
+    GROQ_API_KEY: str | None = None
+    # Picked for tool-calling reliability over raw speed. gpt-oss-120b is the
+    # strongest function-calling model currently served to this key
+    # (GET /openai/v1/models); llama-3.3-70b is no longer offered here.
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    # Provider-neutral turn / timeout knobs. 0 (default) -> fall back to the
+    # GEMINI_* values above, so nothing changes unless these are set explicitly.
+    AGENT_MAX_TURNS: int = 0
+    AGENT_TIMEOUT_SECONDS: float = 0.0
 
     # --- Razorpay integration (app/integrations/razorpay/) -------------
     # TEST MODE ONLY in this stage. All optional: when unset, the live

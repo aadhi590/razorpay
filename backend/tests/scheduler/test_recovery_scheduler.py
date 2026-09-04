@@ -184,7 +184,7 @@ def test_manual_agent_run_is_tagged_manual(
 
     eid = make_open_events(n=1)[0]
     monkeypatch.setattr(
-        runner, "GeminiProvider", lambda config=None: ReactiveProvider()
+        runner, "make_provider", lambda config=None: ReactiveProvider()
     )
     runner.run_recovery_agent(sched_db, eid, dry_run=True, triggered_by="manual")
 
@@ -389,7 +389,7 @@ def singleton_scheduler(monkeypatch):
     from app.services import recovery_scheduler as mod
 
     monkeypatch.setattr(
-        runner, "GeminiProvider", lambda config=None: ReactiveProvider()
+        runner, "make_provider", lambda config=None: ReactiveProvider()
     )
     monkeypatch.setattr(mod.scheduler, "_history", deque(maxlen=20))
     monkeypatch.setattr(mod.scheduler, "_cycle_seq", 0)

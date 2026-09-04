@@ -86,7 +86,7 @@ class AgentRunResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     recovery_event_id: int
-    agent: Literal["gemini"] = "gemini"
+    agent: str = "gemini"                 # "gemini" | "groq" -- the active LLM backend
     model: str
     dry_run: bool
 

@@ -23,8 +23,8 @@ from sqlalchemy.orm import Session
 from app.agent.agent import RecoveryAgent
 from app.agent.config import AgentConfig
 from app.agent.guardrails import load_event
+from app.agent.providers import make_provider
 from app.agent.providers.base import LLMProvider, ProviderUnavailable
-from app.agent.providers.gemini import GeminiProvider
 from app.agent.schemas import AgentRunResult
 from app.agent.state import RecoveryAgentState
 from app.models.agent_events import AgentEvent
@@ -69,14 +69,14 @@ def run_recovery_agent(
 
     if provider is None:
         try:
-            provider = GeminiProvider(config)
+            provider = make_provider(config)
         except ProviderUnavailable as exc:
             state = RecoveryAgentState(recovery_event_id, dry_run)
             state.final_status = "failed_safe"
             state.stop_reason = "quota_or_api_failure"
             state.reasoning_summary = str(exc)
             state.errors.append(str(exc))
-            result = _to_result(state, config.model, run_id)
+            result = _to_result(state, config.model, run_id, config.provider)
             if persist:
                 _persist(db, event.id, run_id, result, dry_run, triggered_by)
             return result
@@ -86,8 +86,12 @@ def run_recovery_agent(
         razorpay_client=razorpay_client, voice_service=voice_service,
     )
     state = agent.run(recovery_event_id, dry_run=dry_run)
-    result = _to_result(state, provider.model if hasattr(provider, "model")
-                        else config.model, run_id)
+    result = _to_result(
+        state,
+        provider.model if hasattr(provider, "model") else config.model,
+        run_id,
+        getattr(config, "provider", "gemini"),
+    )
 
     if persist:
         _persist(db, event.id, run_id, result, dry_run, triggered_by)
@@ -97,7 +101,9 @@ def run_recovery_agent(
 
 # --- result assembly -------------------------------------------------
 
-def _to_result(state: RecoveryAgentState, model: str, run_id: str) -> AgentRunResult:
+def _to_result(
+    state: RecoveryAgentState, model: str, run_id: str, agent: str = "gemini"
+) -> AgentRunResult:
     chosen = state.chosen_action
     decision = _decision_label(state)
     outcome = state.outcomes[-1] if state.outcomes else None
@@ -131,7 +137,7 @@ def _to_result(state: RecoveryAgentState, model: str, run_id: str) -> AgentRunRe
         action_lift_trend=state.action_lift_trend,
         tool_trace=list(state.trace),
         errors=list(state.errors),
-        agent="gemini",
+        agent=agent,
     )
 
 
@@ -155,7 +161,7 @@ def _persist(
 ) -> None:
     trace_ctx: dict[str, Any] = {
         "agent_run_id": run_id,
-        "agent": "gemini",
+        "agent": result.agent,
         "model": result.model,
         "dry_run": dry_run,
         "triggered_by": triggered_by,
