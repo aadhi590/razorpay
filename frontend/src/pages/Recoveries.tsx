@@ -87,8 +87,8 @@ export default function Recoveries() {
         </Card>
       ) : (
         <>
-          {/* controls */}
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* controls — a wide "working list" console, distinct from a stat summary */}
+          <div className="mb-4 flex flex-col gap-3 rounded-card border border-line/[.08] bg-surface-2/50 p-2.5 shadow-panel lg:flex-row lg:items-center lg:justify-between">
             <div className="inline-flex rounded-control bg-surface-3 p-0.5 text-2xs font-semibold">
               {STATUS_TABS.map((t) => (
                 <button
@@ -107,8 +107,8 @@ export default function Recoveries() {
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="relative">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-1 lg:justify-end">
+              <label className="relative grow sm:grow-0">
                 <Search
                   size={14}
                   className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-faint"
@@ -120,9 +120,9 @@ export default function Recoveries() {
                     resetPage();
                   }}
                   inputMode="numeric"
-                  placeholder="Event ID…"
+                  placeholder="Search event ID…"
                   aria-label="Search by recovery event ID"
-                  className="h-8 w-36 rounded-control bg-surface-2 pl-8 pr-2 text-[13px] text-ink outline-none ring-1 ring-inset ring-line/[.1] placeholder:text-ink-faint focus:ring-accent"
+                  className="h-8 w-full rounded-control bg-surface pl-8 pr-2 text-[13px] text-ink outline-none ring-1 ring-inset ring-line/[.1] placeholder:text-ink-faint focus:ring-accent sm:w-52"
                 />
               </label>
               <select
@@ -184,7 +184,10 @@ export default function Recoveries() {
                 description="Adjust the filters or search a different event ID."
               />
             ) : (
-              <ul className="divide-y divide-line/[.05]">
+              <ul
+                key={`${status}|${action}|${agentOnly}|${clampedPage}`}
+                className="animate-fade-up divide-y divide-line/[.05]"
+              >
                 {pageRows.map((row) => (
                   <li key={row.id}>
                     <Link

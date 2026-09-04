@@ -59,10 +59,11 @@ export default function Audit() {
         description="Every decision, execution and recovery is a persisted record. No secrets, no raw payloads, no model chain-of-thought are ever stored."
       />
 
-      {/* verified recovery evidence spotlight */}
-      <Card className="mb-6 border-success/20">
+      {/* verified recovery evidence spotlight — the one story that matters,
+          framed apart from the raw system log beneath it */}
+      <Card className="mb-8 border-success/25 bg-gradient-to-br from-success/[.06] via-transparent to-transparent">
         <CardHeader
-          eyebrow="Verified recovery"
+          eyebrow="The one recovery proven end to end"
           title={
             <span className="inline-flex items-center gap-2">
               <ShieldCheck size={15} className="text-success" />
@@ -88,6 +89,10 @@ export default function Audit() {
       </Card>
 
       {/* system-wide activity */}
+      <h2 className="mb-3 flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-muted">
+        <span className="h-3.5 w-0.5 rounded-full bg-accent/60" aria-hidden />
+        Then everything else — the full system log
+      </h2>
       <Card className="overflow-hidden">
         <CardHeader
           eyebrow="System"

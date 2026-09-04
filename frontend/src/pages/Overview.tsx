@@ -71,67 +71,74 @@ export default function Overview() {
           </CardBody>
         </Card>
       ) : summary.isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <StatSkeleton key={i} />
-          ))}
-        </div>
+        <>
+          <Skeleton className="h-[168px] w-full rounded-card" />
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <StatSkeleton />
+            <StatSkeleton />
+          </div>
+        </>
       ) : s ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="panel-hero flex flex-col justify-between p-5 sm:col-span-2 lg:col-span-2">
-            <div className="label-caps">Revenue recovered</div>
-            <div className="mt-2 font-bold leading-none tracking-tight text-success tnum text-[clamp(2.4rem,6vw,3.6rem)]">
-              <HeroRecovered rupees={recoveredRupees} />
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-              {impact.data?.incremental_revenue_recovered_paise != null ? (
-                <span className="font-medium text-success">
-                  {rupeesCompact(impact.data.incremental_revenue_recovered_paise / 100)}{" "}
-                  <span className="font-normal text-ink-muted">
-                    attributable to the AI vs a randomised control baseline
-                  </span>
-                </span>
-              ) : (
-                <span className="text-ink-muted">
-                  across {num(s.recovered_events)} recovered payments
-                </span>
-              )}
-            </div>
-            {impact.data?.computable && impact.data.incremental_recovery_rate_ci_95 ? (
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-control bg-accent/[.09] px-3 py-2.5 ring-1 ring-inset ring-accent/25">
-                <span className="text-lg font-bold tabular-nums text-accent">
-                  {pp(impact.data.incremental_recovery_rate)}
-                </span>
-                <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-accent/90">
-                  incremental recovery
-                </span>
-                <span className="text-2xs tabular-nums text-ink-muted">
-                  · 95% CI {pct(impact.data.incremental_recovery_rate_ci_95[0])}–
-                  {pct(impact.data.incremental_recovery_rate_ci_95[1])} · measured,
-                  not modelled
-                </span>
+        <>
+          <div className="panel-hero p-5 sm:p-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0">
+                <div className="label-caps">Revenue recovered</div>
+                <div className="mt-2 font-bold leading-none tracking-tight text-success tnum text-[clamp(2.6rem,7vw,4rem)]">
+                  <HeroRecovered rupees={recoveredRupees} />
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                  {impact.data?.incremental_revenue_recovered_paise != null ? (
+                    <span className="font-medium text-success">
+                      {rupeesCompact(impact.data.incremental_revenue_recovered_paise / 100)}{" "}
+                      <span className="font-normal text-ink-muted">
+                        attributable to the AI vs a randomised control baseline
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-ink-muted">
+                      across {num(s.recovered_events)} recovered payments
+                    </span>
+                  )}
+                </div>
               </div>
-            ) : null}
+              {impact.data?.computable && impact.data.incremental_recovery_rate_ci_95 ? (
+                <div className="flex shrink-0 flex-wrap items-baseline gap-x-2 gap-y-1 rounded-control bg-accent/[.09] px-3.5 py-3 ring-1 ring-inset ring-accent/25 lg:flex-col lg:items-start">
+                  <span className="text-xl font-bold tabular-nums text-accent">
+                    {pp(impact.data.incremental_recovery_rate)}
+                  </span>
+                  <span className="text-2xs font-semibold uppercase tracking-[0.06em] text-accent/90">
+                    incremental recovery
+                  </span>
+                  <span className="text-2xs tabular-nums text-ink-muted">
+                    95% CI {pct(impact.data.incremental_recovery_rate_ci_95[0])}–
+                    {pct(impact.data.incremental_recovery_rate_ci_95[1])} · measured, not modelled
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          <Stat
-            label="Revenue at risk"
-            value={rupeesCompact(atRiskRupees)}
-            sub={`${num(s.total_failed_payments)} failed payments`}
-            tone="warning"
-          />
-          <Stat
-            label="Recovery rate"
-            value={pct(s.overall_recovery_rate)}
-            delta={
-              cvt.data
-                ? { value: pp(cvt.data.absolute_lift), positive: cvt.data.absolute_lift > 0 }
-                : null
-            }
-            sub={cvt.data ? "vs control" : `${num(s.recovered_events)} of ${num(s.total_recovery_events)}`}
-            tone="accent"
-          />
-        </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Stat
+              label="Revenue at risk"
+              value={rupeesCompact(atRiskRupees)}
+              sub={`${num(s.total_failed_payments)} failed payments`}
+              tone="warning"
+            />
+            <Stat
+              label="Recovery rate"
+              value={pct(s.overall_recovery_rate)}
+              delta={
+                cvt.data
+                  ? { value: pp(cvt.data.absolute_lift), positive: cvt.data.absolute_lift > 0 }
+                  : null
+              }
+              sub={cvt.data ? "vs control" : `${num(s.recovered_events)} of ${num(s.total_recovery_events)}`}
+              tone="accent"
+            />
+          </div>
+        </>
       ) : null}
 
       <div className="mt-3">

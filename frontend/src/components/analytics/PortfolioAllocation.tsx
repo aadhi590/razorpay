@@ -103,14 +103,15 @@ export function PortfolioAllocation() {
                   <span className="text-right">Expected value</span>
                 </div>
 
-                <ul>
-                  {q.data.act.map((e) => (
-                    <AllocationRow key={e.recovery_event_id} e={e} acted />
+                <ul key={capacity}>
+                  {q.data.act.map((e, i) => (
+                    <AllocationRow key={e.recovery_event_id} e={e} acted index={i} />
                   ))}
 
                   {q.data.skip.length > 0 ? (
                     <li
-                      className="my-1 flex items-center gap-2 rounded-control bg-warning/[.08] px-2.5 py-1.5 text-2xs font-semibold text-warning"
+                      className="my-1 flex animate-fade-up items-center gap-2 rounded-control bg-warning/[.08] px-2.5 py-1.5 text-2xs font-semibold text-warning"
+                      style={{ animationDelay: `${q.data.act.length * 45}ms` }}
                       aria-hidden
                     >
                       <Scissors size={12} />
@@ -119,8 +120,12 @@ export function PortfolioAllocation() {
                     </li>
                   ) : null}
 
-                  {q.data.skip.map((e) => (
-                    <AllocationRow key={e.recovery_event_id} e={e} />
+                  {q.data.skip.map((e, i) => (
+                    <AllocationRow
+                      key={e.recovery_event_id}
+                      e={e}
+                      index={q.data.act.length + 1 + i}
+                    />
                   ))}
                 </ul>
               </div>
@@ -139,16 +144,19 @@ export function PortfolioAllocation() {
 function AllocationRow({
   e,
   acted = false,
+  index = 0,
 }: {
   e: PortfolioAllocationEvent;
   acted?: boolean;
+  index?: number;
 }) {
   return (
     <li
       className={cn(
-        "grid grid-cols-[44px_1fr_110px_150px_120px] items-start gap-3 border-t border-line/[.05] px-1 py-2.5 text-[13px] first:border-t-0",
+        "grid animate-fade-up grid-cols-[44px_1fr_110px_150px_120px] items-start gap-3 border-t border-line/[.05] px-1 py-2.5 text-[13px] first:border-t-0",
         !acted && "opacity-80",
       )}
+      style={{ animationDelay: `${index * 45}ms` }}
     >
       <span className="pt-0.5 font-mono text-2xs text-ink-faint tnum">
         {e.rank != null ? `#${e.rank}` : "—"}

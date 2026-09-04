@@ -306,8 +306,8 @@ export default function RecoveryDetail() {
           </CardBody>
         </Card>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
-          {/* left: journey + evidence */}
+        <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)]">
+          {/* left: journey + evidence — supporting metadata, deliberately narrow */}
           <div className="space-y-3">
             <Card>
               <CardHeader eyebrow="Lifecycle" title="Recovery journey" />
@@ -328,7 +328,8 @@ export default function RecoveryDetail() {
             </Card>
           </div>
 
-          {/* right: agent + intelligence + razorpay + message */}
+          {/* right: the agent trace is the dominant element — full width, with the
+              Razorpay + customer-message panels demoted to a secondary row below */}
           <div className="space-y-3">
             {agentRun.isLoading ? (
               <Card>
@@ -361,26 +362,37 @@ export default function RecoveryDetail() {
               </CardBody>
             </Card>
 
-            {r ? (
-              <RazorpayCard
-                interventions={r.interventions}
-                config={r.razorpay_config}
-                amountPaise={r.amount_paise}
-              />
-            ) : null}
+            {(() => {
+              const showMsg =
+                !!ctx?.tool_trace.some((t) => t.tool === "execute_recovery_action") ||
+                !!ctx?.chosen_action;
+              if (!r && !showMsg) return null;
+              return (
+                <div
+                  className={`grid gap-3 ${r && showMsg ? "xl:grid-cols-2" : ""}`}
+                >
+                  {r ? (
+                    <RazorpayCard
+                      interventions={r.interventions}
+                      config={r.razorpay_config}
+                      amountPaise={r.amount_paise}
+                    />
+                  ) : null}
 
-            {ctx?.tool_trace.some((t) => t.tool === "execute_recovery_action") ||
-            ctx?.chosen_action ? (
-              <CustomerMessageCard
-                message={
-                  (ctx?.tool_trace.find((t) => t.tool === "execute_recovery_action")
-                    ?.arguments?.customer_message as string | undefined) ?? null
-                }
-                audioUrl={ctx?.voice?.audio_url}
-                voiceReason={ctx?.voice?.voice_reason}
-                voiceEngine={ctx?.voice?.voice_engine}
-              />
-            ) : null}
+                  {showMsg ? (
+                    <CustomerMessageCard
+                      message={
+                        (ctx?.tool_trace.find((t) => t.tool === "execute_recovery_action")
+                          ?.arguments?.customer_message as string | undefined) ?? null
+                      }
+                      audioUrl={ctx?.voice?.audio_url}
+                      voiceReason={ctx?.voice?.voice_reason}
+                      voiceEngine={ctx?.voice?.voice_engine}
+                    />
+                  ) : null}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

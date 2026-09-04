@@ -7,6 +7,7 @@ import { QueryBoundary } from "@/components/ui/QueryBoundary";
 import { ErrorState } from "@/components/ui/States";
 import { ActionRateChart, ReliabilityBars } from "@/components/charts/Charts";
 import { PortfolioAllocation } from "@/components/analytics/PortfolioAllocation";
+import { ConfidenceIntervalBand } from "@/components/analytics/ConfidenceIntervalBand";
 import {
   useRecoveryImpact,
   useControlVsTreatment,
@@ -61,7 +62,16 @@ export default function Analytics() {
         </Card>
       ) : impact.data && impact.data.computable ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {impact.data.incremental_recovery_rate_ci_95 &&
+          impact.data.incremental_recovery_rate != null ? (
+            <ConfidenceIntervalBand
+              point={impact.data.incremental_recovery_rate}
+              ci={impact.data.incremental_recovery_rate_ci_95}
+              note={impact.data.confidence_note}
+            />
+          ) : null}
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <Stat
               label="Incremental revenue recovered"
               value={rupeesCompact(
@@ -69,8 +79,6 @@ export default function Analytics() {
               )}
               sub="vs control baseline"
               tone="success"
-              hero
-              className="sm:col-span-2"
             />
             <Stat
               label="Incremental recovery rate"
@@ -88,37 +96,6 @@ export default function Analytics() {
               )} recovered`}
             />
           </div>
-
-          {impact.data.incremental_recovery_rate_ci_95 ? (
-            <div className="mt-3 flex flex-col gap-2 rounded-control bg-accent/[.08] p-3.5 ring-1 ring-inset ring-accent/25 sm:flex-row sm:items-center sm:gap-4">
-              <div className="shrink-0">
-                <div className="label-caps mb-1 text-accent/90">
-                  95% confidence interval
-                </div>
-                <div className="font-mono text-[17px] font-bold text-accent tnum">
-                  {pct(impact.data.incremental_recovery_rate_ci_95[0])} –{" "}
-                  {pct(impact.data.incremental_recovery_rate_ci_95[1])}
-                </div>
-              </div>
-              <Badge
-                tone={
-                  impact.data.incremental_recovery_rate_ci_95[0] > 0 ||
-                  impact.data.incremental_recovery_rate_ci_95[1] < 0
-                    ? "success"
-                    : "warning"
-                }
-                dot
-              >
-                {impact.data.incremental_recovery_rate_ci_95[0] > 0 ||
-                impact.data.incremental_recovery_rate_ci_95[1] < 0
-                  ? "Excludes zero — a real, measured effect"
-                  : "Includes zero — directional only"}
-              </Badge>
-              <p className="text-2xs leading-relaxed text-ink-muted sm:ml-auto sm:max-w-md">
-                {impact.data.confidence_note}
-              </p>
-            </div>
-          ) : null}
         </>
       ) : (
         <Card>
